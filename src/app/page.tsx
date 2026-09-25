@@ -65,6 +65,7 @@ export default function Home() {
 
     setImages((prev) => [...prev, ...compressedList].slice(0, 3));
     setResult(null);
+    e.target.value = "";
   };
 
   const removeImage = (index: number) => {
@@ -162,16 +163,29 @@ export default function Home() {
 
               <h2 className="text-base font-bold text-white tracking-tight">Scan Food Package</h2>
               <p className="text-xs text-slate-400 mt-1 max-w-[250px] leading-relaxed">
-                Take photos of the ingredients, nutrition facts, or front label for an instant rating.
+                Take a new picture or choose existing photos from your device gallery.
               </p>
 
-              <label className="mt-5 cursor-pointer inline-flex items-center gap-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs py-3.5 px-7 rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M4 4h3l2-2h6l2 2h3a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm8 3a5 5 0 100 10 5 5 0 000-10zm0 2a3 3 0 110 6 3 3 0 010-6z"/>
-                </svg>
-                <span>Take Photo / Upload</span>
-                <input type="file" accept="image/*" multiple capture="environment" onChange={handleCapture} className="hidden" />
-              </label>
+              {/* Dual Action Buttons: Camera & Gallery */}
+              <div className="flex flex-col sm:flex-row gap-2.5 w-full mt-5">
+                {/* 1. Camera Snapshot */}
+                <label className="flex-1 cursor-pointer inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs py-3 px-4 rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M4 4h3l2-2h6l2 2h3a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm8 3a5 5 0 100 10 5 5 0 000-10zm0 2a3 3 0 110 6 3 3 0 010-6z"/>
+                  </svg>
+                  <span>Camera</span>
+                  <input type="file" accept="image/*" capture="environment" onChange={handleCapture} className="hidden" />
+                </label>
+
+                {/* 2. Device Gallery / Photos Upload (No capture attribute) */}
+                <label className="flex-1 cursor-pointer inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs py-3 px-4 rounded-2xl border border-slate-700 active:scale-95 transition-all">
+                  <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z"/>
+                  </svg>
+                  <span>Upload Photos</span>
+                  <input type="file" accept="image/*" multiple onChange={handleCapture} className="hidden" />
+                </label>
+              </div>
             </div>
           )}
 
