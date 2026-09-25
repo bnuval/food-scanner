@@ -1,11 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function Home() {
   const [images, setImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [userCountry, setUserCountry] = useState<string>("India");
+  const [userTimezone, setUserTimezone] = useState<string>("");
+
+  useEffect(() => {
+    try {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Kolkata";
+      setUserTimezone(tz);
+
+      if (tz.includes("Calcutta") || tz.includes("Kolkata") || tz.includes("Asia/Colombo")) {
+        setUserCountry("India");
+      } else if (tz.includes("Europe/London")) {
+        setUserCountry("United Kingdom");
+      } else if (tz.includes("America/") || tz.includes("US/")) {
+        setUserCountry("United States");
+      } else if (tz.includes("Europe/")) {
+        setUserCountry("European Union");
+      } else if (tz.includes("Australia/")) {
+        setUserCountry("Australia");
+      } else if (tz.includes("Asia/Dubai")) {
+        setUserCountry("UAE");
+      } else {
+        setUserCountry("India");
+      }
+    } catch {
+      setUserCountry("India");
+    }
+  }, []);
 
   const compressImage = (file: File): Promise<string> => {
     return new Promise((resolve) => {
@@ -54,7 +81,11 @@ export default function Home() {
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ imagesBase64: images }),
+        body: JSON.stringify({
+          imagesBase64: images,
+          userCountry,
+          userTimezone,
+        }),
       });
 
       const data = await res.json();
@@ -71,7 +102,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex justify-center py-6 px-3 sm:px-4">
-      <main className="w-full max-w-md flex flex-col gap-5">
+      <main className="w-full max-w-md flex flex-col gap-4">
         {/* Header */}
         <header className="flex items-center justify-between px-2 pb-2 border-b border-slate-800">
           <div>
@@ -79,11 +110,12 @@ export default function Home() {
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
               <h1 className="text-xl font-extrabold tracking-tight text-white">PureBite AI</h1>
             </div>
-            <p className="text-[11px] text-slate-400 font-medium">Instant Health Verdict & Clean Alternatives</p>
+            <p className="text-[11px] text-slate-400 font-medium">Instant Health Verdict & Local Alternatives</p>
           </div>
-          <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-slate-800 text-emerald-400 border border-slate-700">
-            PRO
-          </span>
+          <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-full">
+            <span className="text-[10px] text-slate-400 font-medium">Market:</span>
+            <span className="text-[10px] font-bold text-emerald-400">{userCountry}</span>
+          </div>
         </header>
 
         {/* Scan & Upload Card */}
@@ -119,11 +151,10 @@ export default function Home() {
             </div>
           ) : (
             <div className="py-6 px-3 text-center flex flex-col items-center">
-              {/* Healthy Food Hero Visual Container */}
               <div className="relative w-24 h-24 rounded-2xl overflow-hidden shadow-lg border border-slate-700/80 mb-4 group">
                 <img
                   src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=400&q=80"
-                  alt="Healthy fresh organic food"
+                  alt="Fresh wholesome food"
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 to-transparent"></div>
@@ -131,7 +162,7 @@ export default function Home() {
 
               <h2 className="text-base font-bold text-white tracking-tight">Scan Food Package</h2>
               <p className="text-xs text-slate-400 mt-1 max-w-[250px] leading-relaxed">
-                Snap photos of the ingredients, nutrition facts, or front label for an instant rating.
+                Take photos of the ingredients, nutrition facts, or front label for an instant rating.
               </p>
 
               <label className="mt-5 cursor-pointer inline-flex items-center gap-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs py-3.5 px-7 rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
@@ -158,7 +189,7 @@ export default function Home() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                     </svg>
-                    <span>Evaluating Ingredients...</span>
+                    <span>Evaluating Label & Compliance...</span>
                   </>
                 ) : (
                   <span>Evaluate Health Verdict</span>
@@ -232,6 +263,18 @@ export default function Home() {
                   </div>
                 </div>
 
+                {/* Regional Compliance & Regulatory Notes */}
+                {result.complianceNotes && (
+                  <div className="bg-slate-900/90 rounded-3xl p-4 border border-slate-800">
+                    <h3 className="text-xs font-bold text-sky-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                      <span>???</span> {userCountry} Regulatory Compliance
+                    </h3>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      {result.complianceNotes}
+                    </p>
+                  </div>
+                )}
+
                 {/* Flagged Ingredients */}
                 {result.flaggedIngredients?.length > 0 && (
                   <div className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800">
@@ -265,13 +308,16 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* 3. HEALTHIER ALTERNATIVES */}
+                {/* 3. HEALTHIER LOCAL MARKET ALTERNATIVES */}
                 <div className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800">
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                      Better Health Alternatives
-                    </h3>
-                    <span className="text-[10px] text-emerald-400 font-mono">Higher Score Only</span>
+                    <div>
+                      <h3 className="text-xs font-bold text-white uppercase tracking-wider">
+                        Better Health Alternatives
+                      </h3>
+                      <p className="text-[10px] text-slate-400">Available in {userCountry} market (Higher Score Only)</p>
+                    </div>
+                    <span className="text-[10px] text-emerald-400 font-mono">Ranked</span>
                   </div>
 
                   {result.alternatives && result.alternatives.length > 0 ? (
@@ -309,12 +355,19 @@ export default function Home() {
                     <div className="text-center py-4 bg-slate-950/40 rounded-2xl border border-slate-800">
                       <p className="text-xs text-slate-400">
                         {isBuy
-                          ? "This product is already among the highest scoring in its category."
-                          : "No verified healthier alternatives found with higher scores."}
+                          ? `This product is already among the highest scoring in the ${userCountry} market.`
+                          : `No verified healthier alternatives found with higher scores in the ${userCountry} market.`}
                       </p>
                     </div>
                   )}
                 </div>
+
+                {/* 4. LEGAL / EDUCATIONAL DISCLAIMER */}
+                <footer className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 text-center">
+                  <p className="text-[11px] text-slate-400 leading-relaxed font-normal">
+                    <span className="font-semibold text-slate-300">Disclaimer:</span> This application and its nutritional scores are for educational and informational purposes only. It is not intended as medical, dietary, or healthcare advice. Always consult with a qualified nutritionist or medical professional before making significant dietary changes.
+                  </p>
+                </footer>
               </>
             )}
           </section>

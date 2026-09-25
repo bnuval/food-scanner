@@ -4,7 +4,6 @@ import { GoogleGenAI, Type } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-// Helper: Query Google API to get all currently active models dynamically
 async function getAvailableVisionModels(): Promise<string[]> {
   try {
     const list = await ai.models.list();
@@ -12,14 +11,12 @@ async function getAvailableVisionModels(): Promise<string[]> {
 
     for await (const m of list) {
       const name = m.name?.replace(/^models\//, "") || "";
-      // Match models that support content generation and multimodal input
       const supportsGenerate = m.supportedActions?.includes("generateContent") ?? true;
       if (supportsGenerate && (name.includes("flash") || name.includes("pro"))) {
         candidateModels.push(name);
       }
     }
 
-    // Sort order: prioritize flash models for fast image inference, then pro models
     candidateModels.sort((a, b) => {
       const aIsFlash = a.includes("flash") ? 1 : 0;
       const bIsFlash = b.includes("flash") ? 1 : 0;
@@ -28,26 +25,27 @@ async function getAvailableVisionModels(): Promise<string[]> {
 
     if (candidateModels.length > 0) return candidateModels;
   } catch (err) {
-    console.warn("Could not fetch dynamic model list, using fallback priority list.");
+    console.warn("Could not fetch model list, using fallback priority list.");
   }
 
-  // Safe fallback priority list across supported 3.x and 2.5 generations
   return [
     "gemini-3.8-flash",
     "gemini-3.1-pro-preview",
     "gemini-2.5-flash",
     "gemini-2.5-pro",
-    "gemini-flash-latest"
   ];
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { imagesBase64 } = await req.json();
+    const { imagesBase64, userCountry, userTimezone } = await req.json();
 
     if (!imagesBase64 || !Array.isArray(imagesBase64) || imagesBase64.length === 0) {
       return NextResponse.json({ error: "No images provided" }, { status: 400 });
     }
+
+    const detectedCountry = userCountry || "India";
+    const detectedTz = userTimezone || "Asia/Kolkata";
 
     const imageParts = imagesBase64.map((base64: string) => ({
       inlineData: {
@@ -56,24 +54,33 @@ export async function POST(req: NextRequest) {
       },
     }));
 
-    const promptText = `You are a clinical food scientist and consumer advocate. Analyze this packaged food product label carefully.
+    const promptText = `You are an international food regulatory compliance auditor, clinical food scientist, and consumer health advocate.
+
+USER LOCATION CONTEXT:
+- Detected User Country: "${detectedCountry}" (Timezone: ${detectedTz}).
+- All product recommendations MUST strictly reflect commercial availability in the ${detectedCountry} consumer market.
 
 1. Legibility:
-   If photos are unreadable, out of focus, or lack ingredients, set isReadable to false.
+   If photos are unreadable, cut off, or miss the ingredient list, set isReadable: false.
 
-2. Health Scoring (0 to 100):
-   - Calculate an objective healthScore (0-100) based on nutritional density, UPF markers, artificial additives, palm oil, refined sugars, and sodium.
+2. Regulatory Compliance Check:
+   - Check compliance based on the regulations of ${detectedCountry}:
+     * For India: Benchmark against FSSAI guidelines (e.g., hidden sugars, maltodextrin, edible vegetable oil/palm oil declarations, permitted INS numbers, class II preservatives).
+     * For EU/UK: Flag additives or artificial colors restricted under EFSA (e.g., Southampton Six dyes).
+     * For US: Review against FDA GRAS safety limits, high-fructose corn syrup, and trans-fats.
+   - Note any regulatory warning flags in "complianceNotes".
+
+3. Binary Verdict & Health Scoring:
+   - Calculate healthScore (0 to 100).
    - If healthScore >= 70, verdict is "BUY".
    - If healthScore < 70, verdict is "AVOID".
+   - Primary Reason: Provide 1-2 punchy sentences justifying the verdict.
 
-3. Reasons:
-   - Provide a clear, primary 1-2 sentence core reason for this verdict.
-   - Highlight positive highlights and flagged harmful ingredients.
-
-4. Recommendation Rules (STRICT):
-   - Suggest 2 to 3 commercially available healthier alternatives in the exact same food category.
-   - Assign an estimated healthScore (0 to 100) to each alternative.
-   - CRITICAL: EVERY suggested alternative MUST have a higher healthScore than the scanned product. If an alternative has an equal or lower score, EXCLUDE it entirely. If no better alternatives exist, return an empty array.`;
+4. LOCAL MARKET ALTERNATIVES (STRICT):
+   - Recommend 2-3 healthier alternatives commercially available in the retail or quick-commerce market of ${detectedCountry}.
+     (e.g., if India: recommend popular Indian clean-label brands like The Whole Truth, Yogabar, Epigamia, Slurrp Farm, Farmley, True Elements, etc.)
+   - Assign an estimated healthScore (0-100) to each alternative.
+   - CRITICAL: EVERY suggested alternative MUST have a higher healthScore than the scanned product. Skip any product that scores equal or lower.`;
 
     const config = {
       responseMimeType: "application/json",
@@ -85,8 +92,9 @@ export async function POST(req: NextRequest) {
           brandName: { type: Type.STRING },
           category: { type: Type.STRING },
           verdict: { type: Type.STRING, enum: ["BUY", "AVOID"] },
-          healthScore: { type: Type.INTEGER, description: "Score from 0 to 100" },
-          primaryReason: { type: Type.STRING, description: "Detailed 1-2 sentence justification" },
+          healthScore: { type: Type.INTEGER },
+          primaryReason: { type: Type.STRING },
+          complianceNotes: { type: Type.STRING, description: "Regulatory observation based on local food authority rules (FSSAI/FDA/EFSA)" },
           flaggedIngredients: {
             type: Type.ARRAY,
             items: {
@@ -110,6 +118,7 @@ export async function POST(req: NextRequest) {
                 productName: { type: Type.STRING },
                 estimatedScore: { type: Type.INTEGER },
                 whyBetter: { type: Type.STRING },
+                marketCountry: { type: Type.STRING, description: "Country market where it is sold" },
               },
             },
           },
@@ -118,16 +127,11 @@ export async function POST(req: NextRequest) {
       },
     };
 
-    // Get live models from Google
     const modelsToTry = await getAvailableVisionModels();
-    console.log("Active candidate models:", modelsToTry);
-
     let lastError: any = null;
 
-    // Loop through all active models until one succeeds
     for (const model of modelsToTry) {
       try {
-        console.log(`Attempting analysis with model: ${model}...`);
         const response = await ai.models.generateContent({
           model,
           contents: [
@@ -141,23 +145,18 @@ export async function POST(req: NextRequest) {
 
         const result = JSON.parse(response.text || "{}");
 
-        // Filter alternatives to ensure strictly better scores
+        // Filter: only keep alternatives that outscore the scanned product
         if (result.alternatives && Array.isArray(result.alternatives)) {
           result.alternatives = result.alternatives.filter(
             (alt: any) => alt.estimatedScore > result.healthScore
           );
         }
 
-        console.log(`Success using model: ${model}`);
         return NextResponse.json(result);
       } catch (err: any) {
         lastError = err;
         const status = err?.status || err?.code;
-        const msg = err?.message || "";
-        console.warn(`Model ${model} failed (Status: ${status}). Checking next available model...`);
-
-        // If it's a 503 (high demand) or 429 (rate limit), pause briefly before trying next model
-        if (status === 503 || status === 429 || msg.includes("503") || msg.includes("high demand")) {
+        if (status === 503 || status === 429) {
           await delay(1200);
         }
         continue;
@@ -166,7 +165,7 @@ export async function POST(req: NextRequest) {
 
     throw lastError;
   } catch (error: any) {
-    console.error("All candidate models failed:", error);
+    console.error("Analysis Error:", error);
     return NextResponse.json(
       { error: error?.message || "Failed to analyze image with available models." },
       { status: 500 }
