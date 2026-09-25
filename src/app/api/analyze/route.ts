@@ -58,17 +58,17 @@ export async function POST(req: NextRequest) {
 
 USER LOCATION CONTEXT:
 - Detected User Country: "${detectedCountry}" (Timezone: ${detectedTz}).
-- All product recommendations MUST strictly reflect commercial availability in the ${detectedCountry} consumer market.
+- All product recommendations MUST strictly be real, branded products commercially available in the ${detectedCountry} retail/online market.
 
 1. Legibility:
    If photos are unreadable, cut off, or miss the ingredient list, set isReadable: false.
 
 2. Regulatory Compliance Check:
-   - Check compliance based on the regulations of ${detectedCountry}:
-     * For India: Benchmark against FSSAI guidelines (e.g., hidden sugars, maltodextrin, edible vegetable oil/palm oil declarations, permitted INS numbers, class II preservatives).
-     * For EU/UK: Flag additives or artificial colors restricted under EFSA (e.g., Southampton Six dyes).
-     * For US: Review against FDA GRAS safety limits, high-fructose corn syrup, and trans-fats.
-   - Note any regulatory warning flags in "complianceNotes".
+   - Check compliance based on regulations of ${detectedCountry}:
+     * For India: Benchmark against FSSAI guidelines (e.g., added sugar levels, edible vegetable oil/palm oil declarations, permitted INS numbers, preservatives like INS 211).
+     * For EU/UK: Flag additives restricted under EFSA (e.g., synthetic food dyes).
+     * For US: Review against FDA GRAS limits and high-fructose corn syrup.
+   - Note any regulatory observation in "complianceNotes".
 
 3. Binary Verdict & Health Scoring:
    - Calculate healthScore (0 to 100).
@@ -76,11 +76,10 @@ USER LOCATION CONTEXT:
    - If healthScore < 70, verdict is "AVOID".
    - Primary Reason: Provide 1-2 punchy sentences justifying the verdict.
 
-4. LOCAL MARKET ALTERNATIVES (STRICT):
-   - Recommend 2-3 healthier alternatives commercially available in the retail or quick-commerce market of ${detectedCountry}.
-     (e.g., if India: recommend popular Indian clean-label brands like The Whole Truth, Yogabar, Epigamia, Slurrp Farm, Farmley, True Elements, etc.)
-   - Assign an estimated healthScore (0-100) to each alternative.
-   - CRITICAL: EVERY suggested alternative MUST have a higher healthScore than the scanned product. Skip any product that scores equal or lower.`;
+4. LOCAL MARKET ALTERNATIVES (ALWAYS PROVIDE 2-3 OPTIONS):
+   - You MUST ALWAYS provide 2 to 3 real alternative products in the same exact food category from the ${detectedCountry} market.
+   - If Verdict is "AVOID": Suggest strictly cleaner alternatives that score HIGHER than the scanned product.
+   - If Verdict is "BUY" (already high scoring): Suggest top-tier peer clean-label brands that are also great healthy options in this category (for example, in India for ketchup: The Whole Truth Dates Ketchup, Two Brothers Organic Farms Tomato Sauce, Slurrp Farm Ketchup, etc.). Give realistic scores for each.`;
 
     const config = {
       responseMimeType: "application/json",
@@ -94,7 +93,7 @@ USER LOCATION CONTEXT:
           verdict: { type: Type.STRING, enum: ["BUY", "AVOID"] },
           healthScore: { type: Type.INTEGER },
           primaryReason: { type: Type.STRING },
-          complianceNotes: { type: Type.STRING, description: "Regulatory observation based on local food authority rules (FSSAI/FDA/EFSA)" },
+          complianceNotes: { type: Type.STRING },
           flaggedIngredients: {
             type: Type.ARRAY,
             items: {
@@ -118,12 +117,12 @@ USER LOCATION CONTEXT:
                 productName: { type: Type.STRING },
                 estimatedScore: { type: Type.INTEGER },
                 whyBetter: { type: Type.STRING },
-                marketCountry: { type: Type.STRING, description: "Country market where it is sold" },
+                marketCountry: { type: Type.STRING },
               },
             },
           },
         },
-        required: ["isReadable", "verdict", "healthScore", "primaryReason"],
+        required: ["isReadable", "verdict", "healthScore", "primaryReason", "alternatives"],
       },
     };
 
@@ -145,11 +144,15 @@ USER LOCATION CONTEXT:
 
         const result = JSON.parse(response.text || "{}");
 
-        // Filter: only keep alternatives that outscore the scanned product
+        // Logic check:
+        // If AVOID, ensure alternatives score higher.
+        // If BUY, allow peer options (equal or higher, or within 5 points of top tier).
         if (result.alternatives && Array.isArray(result.alternatives)) {
-          result.alternatives = result.alternatives.filter(
-            (alt: any) => alt.estimatedScore > result.healthScore
-          );
+          if (result.verdict === "AVOID") {
+            result.alternatives = result.alternatives.filter(
+              (alt: any) => alt.estimatedScore >= result.healthScore
+            );
+          }
         }
 
         return NextResponse.json(result);

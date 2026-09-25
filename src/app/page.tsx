@@ -308,14 +308,14 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* 3. HEALTHIER LOCAL MARKET ALTERNATIVES */}
+                {/* 3. LOCAL MARKET ALTERNATIVES */}
                 <div className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800">
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                        Better Health Alternatives
+                        {isBuy ? "Similar Top-Rated Choices" : "Healthier Alternatives"}
                       </h3>
-                      <p className="text-[10px] text-slate-400">Available in {userCountry} market (Higher Score Only)</p>
+                      <p className="text-[10px] text-slate-400">Available in {userCountry} market</p>
                     </div>
                     <span className="text-[10px] text-emerald-400 font-mono">Ranked</span>
                   </div>
@@ -339,7 +339,7 @@ export default function Home() {
                                 </span>
                                 {scoreDiff > 0 && (
                                   <span className="text-[10px] text-emerald-400 font-medium mt-0.5">
-                                    +{scoreDiff} pts better
+                                    +{scoreDiff} pts higher
                                   </span>
                                 )}
                               </div>
@@ -354,9 +354,7 @@ export default function Home() {
                   ) : (
                     <div className="text-center py-4 bg-slate-950/40 rounded-2xl border border-slate-800">
                       <p className="text-xs text-slate-400">
-                        {isBuy
-                          ? `This product is already among the highest scoring in the ${userCountry} market.`
-                          : `No verified healthier alternatives found with higher scores in the ${userCountry} market.`}
+                        Top clean choices in this category will be listed here.
                       </p>
                     </div>
                   )}
