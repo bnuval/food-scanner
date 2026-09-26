@@ -63,24 +63,35 @@ USER LOCATION CONTEXT:
 1. Legibility:
    If photos are unreadable, cut off, or miss the ingredient list, set isReadable: false.
 
-2. Regulatory Compliance Check:
-   - Check compliance based on regulations of ${detectedCountry} (e.g., FSSAI standards for India, added sugar limits, edible vegetable oils/palm oil declarations, permitted INS numbers, preservatives like INS 211).
-   - Provide "complianceNotes" in English, and also provide a clear Hindi translation in "complianceNotesHindi".
+2. DETERMINISTIC HEALTH SCORING (Start at 100 points, apply strict math):
+   Apply this exact scoring rubric so results are consistent:
+   A. Harmful Additives (Major Deductions):
+      - Artificial Preservatives (Sodium Benzoate / INS 211, Potassium Sorbate): -30 pts.
+      - Hydrogenated Oils / Palm Oil / Fractionated Fat: -25 pts.
+      - Synthetic Food Dyes / Artificial Colors: -25 pts.
+      - Artificial Sweeteners (Sucralose, Aspartame, Acesulfame K): -20 pts.
+   B. Nutritional Balance (Minor Deductions):
+      - High Added Sugar (>20g / 100g): Deduct 15 pts.
+      - Moderate Added Sugar (10g - 20g / 100g): Deduct 8 pts.
+      - High Sodium (>600mg / 100g): Deduct 10 pts.
+   C. Whole Food Bonus:
+      - If sweetened using unrefined sources (like jaggery, dates, honey) instead of refined white sugar: Add back +5 pts.
+      - Minimally processed / No chemical additives: Add back +5 pts.
 
-3. Binary Verdict & Health Scoring:
-   - Calculate healthScore (0 to 100).
-   - If healthScore >= 70, verdict is "BUY".
-   - If healthScore < 70, verdict is "AVOID".
-   - Provide "primaryReason" in English, and also provide "primaryReasonHindi" in natural Hindi.
+   FINAL VERDICT RULE:
+   - healthScore >= 70: "BUY"
+   - healthScore < 70: "AVOID"
 
-4. Flagged Ingredients:
-   - For every flagged ingredient of concern, provide the concern in English AND provide "concernHindi".
+3. Reasons & Bilingual Translations:
+   - Provide "primaryReason" in English and "primaryReasonHindi" in Hindi.
+   - For flagged ingredients, provide "name", "concern" (English), and "concernHindi" (Hindi).
+   - Provide "complianceNotes" (English) and "complianceNotesHindi" (Hindi) assessing rules in ${detectedCountry} (e.g. FSSAI in India).
 
-5. LOCAL MARKET ALTERNATIVES (ALWAYS PROVIDE 2-3 REAL OPTIONS):
-   - You MUST ALWAYS provide 2 to 3 real alternative products in the same category from the ${detectedCountry} market.
-   - For each alternative, provide exact brand and product name.`;
+4. Alternatives:
+   - Provide 2 to 3 real alternative brands available in ${detectedCountry} with estimated scores.`;
 
     const config = {
+      temperature: 0, // Enforces deterministic, consistent output
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -146,7 +157,6 @@ USER LOCATION CONTEXT:
 
         const result = JSON.parse(response.text || "{}");
 
-        // Format purchase hyperlinks for each alternative
         if (result.alternatives && Array.isArray(result.alternatives)) {
           result.alternatives = result.alternatives.map((alt: any) => {
             const query = encodeURIComponent(`${alt.brand} ${alt.productName}`);
