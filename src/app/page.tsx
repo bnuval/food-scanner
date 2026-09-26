@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 
 export default function Home() {
   const [images, setImages] = useState<string[]>([]);
@@ -120,6 +121,19 @@ export default function Home() {
           </div>
         </header>
 
+        {/* Top Tab Bar */}
+        <nav className="flex rounded-2xl bg-slate-900/90 p-1 border border-slate-800">
+          <div className="flex-1 py-2 text-center text-xs font-bold text-slate-950 bg-emerald-500 rounded-xl shadow-md">
+            Package Scanner
+          </div>
+          <Link
+            href="/search"
+            className="flex-1 py-2 text-center text-xs font-semibold text-slate-400 hover:text-white rounded-xl transition-all"
+          >
+            Product Search
+          </Link>
+        </nav>
+
         {/* Scan & Upload Card */}
         <section className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800 shadow-2xl backdrop-blur-md">
           {images.length > 0 ? (
@@ -163,8 +177,6 @@ export default function Home() {
               </div>
 
               <h2 className="text-base font-bold text-white tracking-tight">Scan Food Package</h2>
-              
-              {/* Comprehensive instructional hint */}
               <p className="text-xs text-slate-300 mt-2 max-w-[280px] leading-relaxed">
                 Take a new picture or choose existing photos of the <span className="font-semibold text-emerald-400">ingredient list</span>, <span className="font-semibold text-emerald-400">nutrition table</span>, or <span className="font-semibold text-emerald-400">QR code / barcode</span> from your device gallery.
               </p>
@@ -265,7 +277,7 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* 2. REASON FOR VERDICT (Hindi shown only for India) */}
+                  {/* 2. REASON FOR VERDICT */}
                   <div className="mt-3 pt-3 border-t border-slate-800/80 text-left">
                     <div className="flex items-center justify-between mb-1.5">
                       <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
@@ -288,7 +300,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Regional Compliance & Regulatory Notes (Hindi shown only for India) */}
+                {/* Regional Compliance & Regulatory Notes */}
                 {result.complianceNotes && (
                   <div className="bg-slate-900/90 rounded-3xl p-4 border border-slate-800">
                     <div className="flex items-center justify-between mb-2">
@@ -315,7 +327,7 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Flagged Ingredients of Concern (Hindi shown only for India) */}
+                {/* Flagged Ingredients of Concern */}
                 {result.flaggedIngredients?.length > 0 && (
                   <div className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800">
                     <div className="flex items-center justify-between mb-2.5">
