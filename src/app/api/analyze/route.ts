@@ -4,122 +4,6 @@ import { GoogleGenAI, Type } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-// Official FSA / Ofcom / Nutri-Score Algorithm for 100g solid foods
-function computeOfficialNutriScore(metrics: {
-  energyKcalPer100g?: number;
-  totalSugarGPer100g?: number;
-  satFatGPer100g?: number;
-  sodiumMgPer100g?: number;
-  fruitVegPerc?: number;
-  fiberGPer100g?: number;
-  proteinGPer100g?: number;
-  hasSyntheticPreservativeOrDye?: boolean;
-  hasIndustrialPalmFat?: boolean;
-}): { score: number; verdict: "BUY" | "AVOID" } {
-  // 1. Calculate N Points (Negative Nutrients)
-  // Energy (kJ)
-  const energyKj = (metrics.energyKcalPer100g || 0) * 4.184;
-  let energyPts = 0;
-  if (energyKj > 3350) energyPts = 10;
-  else if (energyKj > 3015) energyPts = 9;
-  else if (energyKj > 2680) energyPts = 8;
-  else if (energyKj > 2345) energyPts = 7;
-  else if (energyKj > 2010) energyPts = 6;
-  else if (energyKj > 1675) energyPts = 5;
-  else if (energyKj > 1340) energyPts = 4;
-  else if (energyKj > 1005) energyPts = 3;
-  else if (energyKj > 670) energyPts = 2;
-  else if (energyKj > 335) energyPts = 1;
-
-  // Sugars (g/100g)
-  const sugars = metrics.totalSugarGPer100g || 0;
-  let sugarPts = 0;
-  if (sugars > 45) sugarPts = 10;
-  else if (sugars > 40) sugarPts = 9;
-  else if (sugars > 36) sugarPts = 8;
-  else if (sugars > 31) sugarPts = 7;
-  else if (sugars > 27) sugarPts = 6;
-  else if (sugars > 22.5) sugarPts = 5;
-  else if (sugars > 18) sugarPts = 4;
-  else if (sugars > 13.5) sugarPts = 3;
-  else if (sugars > 9) sugarPts = 2;
-  else if (sugars > 4.5) sugarPts = 1;
-
-  // Saturated Fat (g/100g)
-  const satFat = metrics.satFatGPer100g || 0;
-  let satFatPts = 0;
-  if (satFat > 10) satFatPts = 10;
-  else if (satFat > 9) satFatPts = 9;
-  else if (satFat > 8) satFatPts = 8;
-  else if (satFat > 7) satFatPts = 7;
-  else if (satFat > 6) satFatPts = 6;
-  else if (satFat > 5) satFatPts = 5;
-  else if (satFat > 4) satFatPts = 4;
-  else if (satFat > 3) satFatPts = 3;
-  else if (satFat > 2) satFatPts = 2;
-  else if (satFat > 1) satFatPts = 1;
-
-  // Sodium (mg/100g)
-  const sodium = metrics.sodiumMgPer100g || 0;
-  let sodiumPts = 0;
-  if (sodium > 900) sodiumPts = 10;
-  else if (sodium > 810) sodiumPts = 9;
-  else if (sodium > 720) sodiumPts = 8;
-  else if (sodium > 630) sodiumPts = 7;
-  else if (sodium > 540) sodiumPts = 6;
-  else if (sodium > 450) sodiumPts = 5;
-  else if (sodium > 360) sodiumPts = 4;
-  else if (sodium > 270) sodiumPts = 3;
-  else if (sodium > 180) sodiumPts = 2;
-  else if (sodium > 90) sodiumPts = 1;
-
-  const totalN = energyPts + sugarPts + satFatPts + sodiumPts;
-
-  // 2. Calculate P Points (Positive Nutrients)
-  // Fruit / Veg %
-  const fv = metrics.fruitVegPerc || 0;
-  let fvPts = 0;
-  if (fv > 80) fvPts = 5;
-  else if (fv > 60) fvPts = 2;
-  else if (fv > 40) fvPts = 1;
-
-  // Fiber (g/100g)
-  const fiber = metrics.fiberGPer100g || 0;
-  let fiberPts = 0;
-  if (fiber > 4.7) fiberPts = 5;
-  else if (fiber > 3.7) fiberPts = 4;
-  else if (fiber > 2.8) fiberPts = 3;
-  else if (fiber > 1.9) fiberPts = 2;
-  else if (fiber > 0.9) fiberPts = 1;
-
-  // Protein (g/100g)
-  const protein = metrics.proteinGPer100g || 0;
-  let proteinPts = 0;
-  if (protein > 8.0) proteinPts = 5;
-  else if (protein > 6.4) proteinPts = 4;
-  else if (protein > 4.8) proteinPts = 3;
-  else if (protein > 3.2) proteinPts = 2;
-  else if (protein > 1.6) proteinPts = 1;
-
-  const totalP = fvPts + fiberPts + proteinPts;
-
-  // Raw FSA score: lower is healthier (-15 best, +40 worst)
-  let rawScore = totalN - totalP;
-
-  // UPF / Additive modifier (NOVA 4 penalty)
-  if (metrics.hasSyntheticPreservativeOrDye) rawScore += 8;
-  if (metrics.hasIndustrialPalmFat) rawScore += 6;
-
-  // Map to 0-100 scale:
-  // -15 maps to 100
-  // +40 maps to 0
-  const normalized = Math.round(100 - ((rawScore + 15) / 55) * 100);
-  const score = Math.max(5, Math.min(98, normalized));
-  const verdict = score >= 65 ? "BUY" : "AVOID";
-
-  return { score, verdict };
-}
-
 async function getAvailableVisionModels(): Promise<string[]> {
   try {
     const list = await ai.models.list();
@@ -171,10 +55,34 @@ export async function POST(req: NextRequest) {
       },
     }));
 
-    const promptText = `You are a certified food labeling OCR parser and nutritionist.
-Parse the exact nutritional values per 100g and check ingredients on this label.
+    const promptText = `You are an expert nutritional analyst and food toxicologist.
+Score this product using the exact Yuka 3-Pillar Public Health Standard so results match Yuka.
 
-USER COUNTRY: "${detectedCountry}"
+USER BROWSING MARKET:
+- Country: "${detectedCountry}" (Timezone: ${detectedTz})
+
+YUKA EXACT SCORING ARCHITECTURE (0 to 100):
+1. Nutritional Quality (60% of total score):
+   - Evaluated via the international Nutri-Score / FSA system.
+   - For condiments/sauces, factor the realistic serving size (15g-30g RACC) against Daily Values.
+   - Balances negative points (energy, sugars, saturated fat, sodium) against positive points (fiber, protein, fruit/vegetable percentage).
+2. Food Additives & Toxicological Impact (30% of total score):
+   - Evaluate all additives, preservatives, emulsifiers, and colors.
+   - Heavy penalties for high-risk additives: Sodium Benzoate (INS 211), Potassium Sorbate, BHA/BHT, synthetic food dyes (Red 40, Yellow 5/6), artificial sweeteners (Aspartame, Sucralose).
+   - Zero penalty if no chemical additives/preservatives are present.
+3. Organic & Natural Certification (10% of total score):
+   - Award 10 points for verified organic ingredients, unrefined whole-food sweetening (dates, jaggery), or minimal culinary processing.
+
+CALCULATE FINAL HEALTH SCORE (0 to 100):
+- Combine the three pillars into a single integer score between 0 and 100.
+- Calibrate to Yuka ranges:
+  * 75 to 100: Excellent (Clean ingredients, low/moderate sugar/sodium, no chemical additives).
+  * 50 to 74: Good (Clean label, but naturally higher in sugar or salt like clean sauces/condiments).
+  * 25 to 49: Mediocre / Poor (High in sugar/salt or contains controversial preservatives like sodium benzoate).
+  * 0 to 24: Bad (Ultra-processed, hazardous additives, chemical dyes).
+- Verdict Rules:
+  * "BUY" if healthScore >= 65
+  * "AVOID" if healthScore < 65
 
 LANGUAGE RULES:
 ${
@@ -182,23 +90,13 @@ ${
     ? `- Provide "primaryReason" in English AND "primaryReasonHindi" in Hindi.
        - Provide "complianceNotes" in English AND "complianceNotesHindi" in Hindi.
        - In "flaggedIngredients", provide "concern" in English AND "concernHindi" in Hindi.`
-    : `- Leave "primaryReasonHindi", "complianceNotesHindi", and "concernHindi" as empty strings ("").`
+    : `- The user is NOT in India (Browsing from "${detectedCountry}").
+       - Provide all text strictly in English. Leave "primaryReasonHindi", "complianceNotesHindi", and "concernHindi" as empty strings ("").`
 }
 
-NUTRITIONAL EXTRACTION (PER 100g STRICT):
-- energyKcalPer100g: number
-- totalSugarGPer100g: number
-- satFatGPer100g: number (if not listed, use 0)
-- sodiumMgPer100g: number
-- fruitVegPerc: percentage of fruit/vegetable/tomato paste content (e.g. 28% tomato paste = 28)
-- fiberGPer100g: number
-- proteinGPer100g: number
-- hasSyntheticPreservativeOrDye: boolean (true if Sodium Benzoate, INS 211, Sorbates, Tartrazine, Red 40, etc. are present)
-- hasIndustrialPalmFat: boolean (true if palm oil, palmolein, or hydrogenated fat is present)
-
 ALTERNATIVES:
-- Suggest 2 to 3 real alternative products in this food category available in ${detectedCountry}.
-- Estimate their nutritional scores using this same standard.`;
+- Provide 2 to 3 real commercial alternatives in this category available in ${detectedCountry}.
+- Estimate their scores using this exact Yuka standard.`;
 
     const config = {
       temperature: 0,
@@ -210,26 +108,13 @@ ALTERNATIVES:
           productName: { type: Type.STRING },
           brandName: { type: Type.STRING },
           category: { type: Type.STRING },
-          fsaMetrics: {
-            type: Type.OBJECT,
-            properties: {
-              energyKcalPer100g: { type: Type.NUMBER },
-              totalSugarGPer100g: { type: Type.NUMBER },
-              satFatGPer100g: { type: Type.NUMBER },
-              sodiumMgPer100g: { type: Type.NUMBER },
-              fruitVegPerc: { type: Type.NUMBER },
-              fiberGPer100g: { type: Type.NUMBER },
-              proteinGPer100g: { type: Type.NUMBER },
-              hasSyntheticPreservativeOrDye: { type: Type.BOOLEAN },
-              hasIndustrialPalmFat: { type: Type.BOOLEAN },
-            },
-            required: [
-              "energyKcalPer100g",
-              "totalSugarGPer100g",
-              "sodiumMgPer100g",
-              "hasSyntheticPreservativeOrDye",
-              "hasIndustrialPalmFat",
-            ],
+          healthScore: {
+            type: Type.INTEGER,
+            description: "Yuka standard calculated health score from 0 to 100",
+          },
+          verdict: {
+            type: Type.STRING,
+            enum: ["BUY", "AVOID"],
           },
           primaryReason: { type: Type.STRING },
           primaryReasonHindi: { type: Type.STRING },
@@ -264,7 +149,13 @@ ALTERNATIVES:
             },
           },
         },
-        required: ["isReadable", "fsaMetrics", "primaryReason", "alternatives"],
+        required: [
+          "isReadable",
+          "verdict",
+          "healthScore",
+          "primaryReason",
+          "alternatives",
+        ],
       },
     };
 
@@ -285,15 +176,6 @@ ALTERNATIVES:
         });
 
         const result = JSON.parse(response.text || "{}");
-
-        if (!result.isReadable) {
-          return NextResponse.json(result);
-        }
-
-        // Run the official Nutri-Score / FSA Profiling Algorithm
-        const { score, verdict } = computeOfficialNutriScore(result.fsaMetrics || {});
-        result.healthScore = score;
-        result.verdict = verdict;
 
         if (result.alternatives && Array.isArray(result.alternatives)) {
           result.alternatives = result.alternatives.map((alt: any) => {
