@@ -4,6 +4,16 @@ import { GoogleGenAI, Type } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
+function cleanSearchQuery(brand: string, productName: string): string {
+  let title = productName.trim();
+  const b = brand.trim();
+  if (title.toLowerCase().startsWith(b.toLowerCase())) {
+    title = title.slice(b.length).trim();
+  }
+  const combined = `${b} ${title}`.replace(/[,&+]/g, " ").replace(/\s+/g, " ").trim();
+  return encodeURIComponent(combined);
+}
+
 async function getAvailableVisionModels(): Promise<string[]> {
   try {
     const list = await ai.models.list();
@@ -86,6 +96,7 @@ ${
 
 ALTERNATIVES:
 - Provide 2 to 3 real commercial alternatives in this category available in ${detectedCountry}.
+- In "brand", provide brand name. In "productName", provide the clean product title without repeating brand.
 - Estimate their scores using this exact Yuka standard.`;
 
     const config = {
@@ -169,13 +180,11 @@ ALTERNATIVES:
 
         if (result.alternatives && Array.isArray(result.alternatives)) {
           result.alternatives = result.alternatives.map((alt: any) => {
-            const cleanTitle = `${alt.brand} ${alt.productName}`;
-            const encodedTitle = encodeURIComponent(cleanTitle);
+            const cleanQuery = cleanSearchQuery(alt.brand, alt.productName);
 
-            // Direct auto-forward straight to the product page
             const purchaseUrl = isIndiaMarket
-              ? `https://www.google.com/search?q=site:amazon.in/dp+OR+site:amazon.in/gp/product+${encodedTitle}&btnI=1`
-              : `https://www.google.com/search?q=site:amazon.com/dp/+${encodedTitle}&btnI=1`;
+              ? `https://www.amazon.in/s?k=${cleanQuery}`
+              : `https://www.amazon.com/s?k=${cleanQuery}`;
 
             return {
               ...alt,

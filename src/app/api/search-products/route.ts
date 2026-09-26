@@ -4,6 +4,21 @@ import { GoogleGenAI, Type } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
+// Helper: Strip duplicate brand prefixes and special characters
+function cleanSearchQuery(brand: string, productName: string): string {
+  let title = productName.trim();
+  const b = brand.trim();
+  
+  // If product name already starts with brand name, do not repeat it
+  if (title.toLowerCase().startsWith(b.toLowerCase())) {
+    title = title.slice(b.length).trim();
+  }
+  
+  // Remove punctuation that breaks retail search engines
+  const combined = `${b} ${title}`.replace(/[,&+]/g, " ").replace(/\s+/g, " ").trim();
+  return encodeURIComponent(combined);
+}
+
 async function getAvailableModels(): Promise<string[]> {
   try {
     const list = await ai.models.list();
@@ -51,9 +66,10 @@ YOUR TASK:
 Find 3 to 4 specific, commercially real, popular, and VERIFIED HEALTHY/CLEAN-LABEL products sold in ${detectedCountry} matching this query.
 
 CRITERIA:
-1. Provide the exact commercial brand name and full product title as listed in online retail.
-2. healthScore must be strictly between 75 and 98 based on clean ingredients.
-3. Every product returned MUST have healthScore >= 75. Do NOT return mediocre or unhealthy items.`;
+1. Provide the brand name in "brand" (e.g., "Juicy Chemistry").
+2. In "productName", provide ONLY the clean product title without repeating the brand name (e.g., "Kakadu Plum Matcha & Blood Orange Face Wash").
+3. healthScore must strictly be between 75 and 98 based on clean ingredients.
+4. Every product returned MUST have healthScore >= 75. Do NOT return mediocre or unhealthy items.`;
 
     const config = {
       temperature: 0,
@@ -102,79 +118,63 @@ CRITERIA:
 
         if (result.products && Array.isArray(result.products)) {
           result.products = result.products.map((item: any) => {
-            const cleanTitle = `${item.brand} ${item.productName}`;
-            const encodedTitle = encodeURIComponent(cleanTitle);
+            const cleanQuery = cleanSearchQuery(item.brand, item.productName);
 
             const stores = [];
             if (isIndia) {
-              // btnI=1 executes "I'm Feeling Lucky" which jumps straight to the product page
+              // Direct retailer in-app search URLs (works natively on both mobile web and mobile apps)
               stores.push({
                 name: "Amazon",
-                url: `https://www.google.com/search?q=site:amazon.in/dp+OR+site:amazon.in/gp/product+${encodedTitle}&btnI=1`,
+                url: `https://www.amazon.in/s?k=${cleanQuery}`,
                 badgeColor: "bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20",
               });
               stores.push({
                 name: "Flipkart",
-                url: `https://www.google.com/search?q=site:flipkart.com/p/+${encodedTitle}&btnI=1`,
+                url: `https://www.flipkart.com/search?q=${cleanQuery}`,
                 badgeColor: "bg-sky-500/10 text-sky-400 border-sky-500/30 hover:bg-sky-500/20",
               });
               if (categoryType === "cosmetics") {
                 stores.push({
                   name: "Nykaa",
-                  url: `https://www.google.com/search?q=site:nykaa.com+${encodedTitle}&btnI=1`,
+                  url: `https://www.nykaa.com/search/result/?q=${cleanQuery}`,
                   badgeColor: "bg-pink-500/10 text-pink-400 border-pink-500/30 hover:bg-pink-500/20",
                 });
               } else {
                 stores.push({
                   name: "Blinkit",
-                  url: `https://www.google.com/search?q=site:blinkit.com/prn/+${encodedTitle}&btnI=1`,
+                  url: `https://blinkit.com/s/?q=${cleanQuery}`,
                   badgeColor: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20",
                 });
               }
-              stores.push({
-                name: "Buy Online",
-                url: `https://www.google.com/search?tbm=shop&q=${encodedTitle}`,
-                badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20",
-              });
             } else if (detectedCountry.toLowerCase().includes("united states")) {
               stores.push({
                 name: "Amazon",
-                url: `https://www.google.com/search?q=site:amazon.com/dp/+${encodedTitle}&btnI=1`,
+                url: `https://www.amazon.com/s?k=${cleanQuery}`,
                 badgeColor: "bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20",
               });
               stores.push({
                 name: "Walmart",
-                url: `https://www.google.com/search?q=site:walmart.com/ip/+${encodedTitle}&btnI=1`,
+                url: `https://www.walmart.com/search?q=${cleanQuery}`,
                 badgeColor: "bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20",
               });
               if (categoryType === "cosmetics") {
                 stores.push({
                   name: "Sephora",
-                  url: `https://www.google.com/search?q=site:sephora.com/product/+${encodedTitle}&btnI=1`,
+                  url: `https://www.sephora.com/search?keyword=${cleanQuery}`,
                   badgeColor: "bg-pink-500/10 text-pink-400 border-pink-500/30 hover:bg-pink-500/20",
                 });
               } else {
                 stores.push({
                   name: "Target",
-                  url: `https://www.google.com/search?q=site:target.com/p/+${encodedTitle}&btnI=1`,
+                  url: `https://www.target.com/s?searchTerm=${cleanQuery}`,
                   badgeColor: "bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20",
                 });
               }
-              stores.push({
-                name: "Compare Prices",
-                url: `https://www.google.com/search?tbm=shop&q=${encodedTitle}`,
-                badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20",
-              });
             } else {
               stores.push({
                 name: "Amazon",
-                url: `https://www.google.com/search?q=site:amazon.com+${encodedTitle}&btnI=1`,
+                url: `https://www.amazon.com/s?k=${cleanQuery}`,
                 badgeColor: "bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20",
-              });
-              stores.push({
-                name: "Google Shopping",
-                url: `https://www.google.com/search?tbm=shop&q=${encodedTitle}`,
-                badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20",
               });
             }
 
