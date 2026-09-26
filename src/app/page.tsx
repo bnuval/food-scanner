@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useEffect } from "react";
 
@@ -166,9 +166,7 @@ export default function Home() {
                 Take a new picture or choose existing photos from your device gallery.
               </p>
 
-              {/* Dual Action Buttons: Camera & Gallery */}
               <div className="flex flex-col sm:flex-row gap-2.5 w-full mt-5">
-                {/* 1. Camera Snapshot */}
                 <label className="flex-1 cursor-pointer inline-flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs py-3 px-4 rounded-2xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
                   <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                     <path d="M4 4h3l2-2h6l2 2h3a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2zm8 3a5 5 0 100 10 5 5 0 000-10zm0 2a3 3 0 110 6 3 3 0 010-6z"/>
@@ -177,7 +175,6 @@ export default function Home() {
                   <input type="file" accept="image/*" capture="environment" onChange={handleCapture} className="hidden" />
                 </label>
 
-                {/* 2. Device Gallery / Photos Upload (No capture attribute) */}
                 <label className="flex-1 cursor-pointer inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs py-3 px-4 rounded-2xl border border-slate-700 active:scale-95 transition-all">
                   <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                     <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zm-5.04-6.71l-2.75 3.54-1.96-2.36L6.5 17h11l-3.54-4.71z"/>
@@ -189,7 +186,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Analyze Trigger */}
           {images.length > 0 && (
             <div className="flex gap-2 mt-4 pt-3 border-t border-slate-800">
               <button
@@ -266,40 +262,76 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* 2. REASON FOR VERDICT */}
-                  <div className="mt-3 pt-3 border-t border-slate-800/80">
-                    <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                      {isBuy ? "Why you should buy:" : "Why you should avoid:"}
-                    </h3>
+                  {/* 2. REASON FOR VERDICT (Bilingual: English + Hindi) */}
+                  <div className="mt-3 pt-3 border-t border-slate-800/80 text-left">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
+                        {isBuy ? "Why you should buy:" : "Why you should avoid:"}
+                      </h3>
+                      <span className="text-[10px] text-amber-400/90 font-medium">
+                        {isBuy ? "यह उत्पाद क्यों खरीदें:" : "इस उत्पाद से क्यों बचें:"}
+                      </span>
+                    </div>
                     <p className="text-xs text-slate-200 leading-relaxed font-normal">
                       {result.primaryReason}
                     </p>
+                    {result.primaryReasonHindi && (
+                      <p className="text-xs text-amber-200/90 mt-1 leading-relaxed border-t border-slate-800/50 pt-1">
+                        {result.primaryReasonHindi}
+                      </p>
+                    )}
                   </div>
                 </div>
 
-                {/* Regional Compliance & Regulatory Notes */}
+                {/* Regional Compliance & Regulatory Notes (Bilingual: English + Hindi) */}
                 {result.complianceNotes && (
                   <div className="bg-slate-900/90 rounded-3xl p-4 border border-slate-800">
-                    <h3 className="text-xs font-bold text-sky-400 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                      <span>???</span> {userCountry} Regulatory Compliance
-                    </h3>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <svg className="w-4 h-4 text-sky-400 fill-current flex-shrink-0" viewBox="0 0 24 24">
+                          <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
+                        </svg>
+                        <h3 className="text-xs font-bold text-sky-400 uppercase tracking-wider">
+                          {userCountry} Regulatory Compliance
+                        </h3>
+                      </div>
+                      <span className="text-[10px] text-sky-300/80 font-medium">नियामक अनुपालन</span>
+                    </div>
                     <p className="text-xs text-slate-300 leading-relaxed">
                       {result.complianceNotes}
                     </p>
+                    {result.complianceNotesHindi && (
+                      <p className="text-xs text-sky-200/90 mt-1.5 border-t border-slate-800/60 pt-1.5 leading-relaxed">
+                        {result.complianceNotesHindi}
+                      </p>
+                    )}
                   </div>
                 )}
 
-                {/* Flagged Ingredients */}
+                {/* Flagged Ingredients of Concern (Bilingual: English + Hindi) */}
                 {result.flaggedIngredients?.length > 0 && (
                   <div className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800">
-                    <h3 className="text-xs font-bold text-rose-400 uppercase tracking-wider mb-2.5">
-                      Ingredients of Concern
-                    </h3>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div className="flex items-center gap-1.5">
+                        <svg className="w-4 h-4 text-rose-400 fill-current flex-shrink-0" viewBox="0 0 24 24">
+                          <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                        </svg>
+                        <h3 className="text-xs font-bold text-rose-400 uppercase tracking-wider">
+                          Ingredients of Concern
+                        </h3>
+                      </div>
+                      <span className="text-[10px] text-rose-300/80 font-medium">चिंताजनक सामग्री</span>
+                    </div>
                     <div className="space-y-2">
                       {result.flaggedIngredients.map((item: any, i: number) => (
                         <div key={i} className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 text-xs">
                           <div className="font-semibold text-rose-200">{item.name}</div>
                           <div className="text-[11px] text-slate-400 mt-0.5">{item.concern}</div>
+                          {item.concernHindi && (
+                            <div className="text-[11px] text-rose-300/80 mt-1 border-t border-slate-800/50 pt-1">
+                              {item.concernHindi}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -322,7 +354,7 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* 3. LOCAL MARKET ALTERNATIVES */}
+                {/* 3. LOCAL MARKET ALTERNATIVES (With Direct Hyperlinks) */}
                 <div className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800">
                   <div className="flex items-center justify-between mb-3">
                     <div>
@@ -361,6 +393,23 @@ export default function Home() {
                             <p className="text-[11px] text-slate-300 mt-2 border-t border-slate-800/80 pt-1.5 leading-relaxed">
                               {alt.whyBetter}
                             </p>
+
+                            {/* Direct Buy Hyperlink */}
+                            {alt.purchaseUrl && (
+                              <div className="mt-3 pt-2 border-t border-slate-800/60 flex justify-end">
+                                <a
+                                  href={alt.purchaseUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-950/50 hover:bg-emerald-950/80 border border-emerald-800/60 px-3 py-1.5 rounded-xl transition-all"
+                                >
+                                  <span>Buy on {userCountry === "India" ? "Amazon.in" : "Market"}</span>
+                                  <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                                    <path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+                                  </svg>
+                                </a>
+                              </div>
+                            )}
                           </div>
                         );
                       })}

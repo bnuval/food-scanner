@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI, Type } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -64,22 +64,21 @@ USER LOCATION CONTEXT:
    If photos are unreadable, cut off, or miss the ingredient list, set isReadable: false.
 
 2. Regulatory Compliance Check:
-   - Check compliance based on regulations of ${detectedCountry}:
-     * For India: Benchmark against FSSAI guidelines (e.g., added sugar levels, edible vegetable oil/palm oil declarations, permitted INS numbers, preservatives like INS 211).
-     * For EU/UK: Flag additives restricted under EFSA (e.g., synthetic food dyes).
-     * For US: Review against FDA GRAS limits and high-fructose corn syrup.
-   - Note any regulatory observation in "complianceNotes".
+   - Check compliance based on regulations of ${detectedCountry} (e.g., FSSAI standards for India, added sugar limits, edible vegetable oils/palm oil declarations, permitted INS numbers, preservatives like INS 211).
+   - Provide "complianceNotes" in English, and also provide a clear Hindi translation in "complianceNotesHindi".
 
 3. Binary Verdict & Health Scoring:
    - Calculate healthScore (0 to 100).
    - If healthScore >= 70, verdict is "BUY".
    - If healthScore < 70, verdict is "AVOID".
-   - Primary Reason: Provide 1-2 punchy sentences justifying the verdict.
+   - Provide "primaryReason" in English, and also provide "primaryReasonHindi" in natural Hindi.
 
-4. LOCAL MARKET ALTERNATIVES (ALWAYS PROVIDE 2-3 OPTIONS):
-   - You MUST ALWAYS provide 2 to 3 real alternative products in the same exact food category from the ${detectedCountry} market.
-   - If Verdict is "AVOID": Suggest strictly cleaner alternatives that score HIGHER than the scanned product.
-   - If Verdict is "BUY" (already high scoring): Suggest top-tier peer clean-label brands that are also great healthy options in this category (for example, in India for ketchup: The Whole Truth Dates Ketchup, Two Brothers Organic Farms Tomato Sauce, Slurrp Farm Ketchup, etc.). Give realistic scores for each.`;
+4. Flagged Ingredients:
+   - For every flagged ingredient of concern, provide the concern in English AND provide "concernHindi".
+
+5. LOCAL MARKET ALTERNATIVES (ALWAYS PROVIDE 2-3 REAL OPTIONS):
+   - You MUST ALWAYS provide 2 to 3 real alternative products in the same category from the ${detectedCountry} market.
+   - For each alternative, provide exact brand and product name.`;
 
     const config = {
       responseMimeType: "application/json",
@@ -93,7 +92,9 @@ USER LOCATION CONTEXT:
           verdict: { type: Type.STRING, enum: ["BUY", "AVOID"] },
           healthScore: { type: Type.INTEGER },
           primaryReason: { type: Type.STRING },
+          primaryReasonHindi: { type: Type.STRING },
           complianceNotes: { type: Type.STRING },
+          complianceNotesHindi: { type: Type.STRING },
           flaggedIngredients: {
             type: Type.ARRAY,
             items: {
@@ -101,6 +102,7 @@ USER LOCATION CONTEXT:
               properties: {
                 name: { type: Type.STRING },
                 concern: { type: Type.STRING },
+                concernHindi: { type: Type.STRING },
               },
             },
           },
@@ -144,10 +146,19 @@ USER LOCATION CONTEXT:
 
         const result = JSON.parse(response.text || "{}");
 
-        // Logic check:
-        // If AVOID, ensure alternatives score higher.
-        // If BUY, allow peer options (equal or higher, or within 5 points of top tier).
+        // Format purchase hyperlinks for each alternative
         if (result.alternatives && Array.isArray(result.alternatives)) {
+          result.alternatives = result.alternatives.map((alt: any) => {
+            const query = encodeURIComponent(`${alt.brand} ${alt.productName}`);
+            const purchaseUrl = detectedCountry === "India"
+              ? `https://www.amazon.in/s?k=${query}`
+              : `https://www.google.com/search?q=${query}+buy+online`;
+            return {
+              ...alt,
+              purchaseUrl,
+            };
+          });
+
           if (result.verdict === "AVOID") {
             result.alternatives = result.alternatives.filter(
               (alt: any) => alt.estimatedScore >= result.healthScore
