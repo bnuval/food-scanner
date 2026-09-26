@@ -46,6 +46,7 @@ export async function POST(req: NextRequest) {
 
     const detectedCountry = userCountry || "India";
     const detectedTz = userTimezone || "Asia/Kolkata";
+    const isIndiaMarket = detectedCountry.toLowerCase() === "india";
 
     const imageParts = imagesBase64.map((base64: string) => ({
       inlineData: {
@@ -60,11 +61,22 @@ USER LOCATION CONTEXT:
 - Detected User Country: "${detectedCountry}" (Timezone: ${detectedTz}).
 - All product recommendations MUST strictly be real, branded products commercially available in the ${detectedCountry} retail/online market.
 
+LANGUAGE RULES (STRICT):
+${
+  isIndiaMarket
+    ? `- Since the user is browsing from India:
+       * Provide "primaryReason" in English AND provide "primaryReasonHindi" in natural Hindi.
+       * Provide "complianceNotes" in English AND provide "complianceNotesHindi" in Hindi.
+       * In "flaggedIngredients", provide "concern" in English AND provide "concernHindi" in Hindi.`
+    : `- Since the user is NOT in India (they are in "${detectedCountry}"):
+       * Provide ALL responses exclusively in English.
+       * Leave "primaryReasonHindi", "complianceNotesHindi", and "concernHindi" as empty strings (""). Do NOT generate any Hindi text.`
+}
+
 1. Legibility:
    If photos are unreadable, cut off, or miss the ingredient list, set isReadable: false.
 
 2. DETERMINISTIC HEALTH SCORING (Start at 100 points, apply strict math):
-   Apply this exact scoring rubric so results are consistent:
    A. Harmful Additives (Major Deductions):
       - Artificial Preservatives (Sodium Benzoate / INS 211, Potassium Sorbate): -30 pts.
       - Hydrogenated Oils / Palm Oil / Fractionated Fat: -25 pts.
@@ -82,16 +94,14 @@ USER LOCATION CONTEXT:
    - healthScore >= 70: "BUY"
    - healthScore < 70: "AVOID"
 
-3. Reasons & Bilingual Translations:
-   - Provide "primaryReason" in English and "primaryReasonHindi" in Hindi.
-   - For flagged ingredients, provide "name", "concern" (English), and "concernHindi" (Hindi).
-   - Provide "complianceNotes" (English) and "complianceNotesHindi" (Hindi) assessing rules in ${detectedCountry} (e.g. FSSAI in India).
+3. Compliance Check:
+   - Check compliance based on regulations of ${detectedCountry} (e.g., FSSAI in India, EFSA in Europe, FDA in the US).
 
 4. Alternatives:
    - Provide 2 to 3 real alternative brands available in ${detectedCountry} with estimated scores.`;
 
     const config = {
-      temperature: 0, // Enforces deterministic, consistent output
+      temperature: 0,
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -160,7 +170,7 @@ USER LOCATION CONTEXT:
         if (result.alternatives && Array.isArray(result.alternatives)) {
           result.alternatives = result.alternatives.map((alt: any) => {
             const query = encodeURIComponent(`${alt.brand} ${alt.productName}`);
-            const purchaseUrl = detectedCountry === "India"
+            const purchaseUrl = isIndiaMarket
               ? `https://www.amazon.in/s?k=${query}`
               : `https://www.google.com/search?q=${query}+buy+online`;
             return {

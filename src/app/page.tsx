@@ -100,6 +100,7 @@ export default function Home() {
   };
 
   const isBuy = result?.verdict === "BUY";
+  const isIndia = userCountry === "India";
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex justify-center py-6 px-3 sm:px-4">
@@ -262,20 +263,22 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* 2. REASON FOR VERDICT (Bilingual: English + Hindi) */}
+                  {/* 2. REASON FOR VERDICT (Hindi shown only for India) */}
                   <div className="mt-3 pt-3 border-t border-slate-800/80 text-left">
                     <div className="flex items-center justify-between mb-1.5">
                       <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
                         {isBuy ? "Why you should buy:" : "Why you should avoid:"}
                       </h3>
-                      <span className="text-[10px] text-amber-400/90 font-medium">
-                        {isBuy ? "यह उत्पाद क्यों खरीदें:" : "इस उत्पाद से क्यों बचें:"}
-                      </span>
+                      {isIndia && result.primaryReasonHindi && (
+                        <span className="text-[10px] text-amber-400/90 font-medium">
+                          {isBuy ? "यह उत्पाद क्यों खरीदें:" : "इस उत्पाद से क्यों बचें:"}
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-slate-200 leading-relaxed font-normal">
                       {result.primaryReason}
                     </p>
-                    {result.primaryReasonHindi && (
+                    {isIndia && result.primaryReasonHindi && (
                       <p className="text-xs text-amber-200/90 mt-1 leading-relaxed border-t border-slate-800/50 pt-1">
                         {result.primaryReasonHindi}
                       </p>
@@ -283,7 +286,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* Regional Compliance & Regulatory Notes (Bilingual: English + Hindi) */}
+                {/* Regional Compliance & Regulatory Notes (Hindi shown only for India) */}
                 {result.complianceNotes && (
                   <div className="bg-slate-900/90 rounded-3xl p-4 border border-slate-800">
                     <div className="flex items-center justify-between mb-2">
@@ -295,12 +298,14 @@ export default function Home() {
                           {userCountry} Regulatory Compliance
                         </h3>
                       </div>
-                      <span className="text-[10px] text-sky-300/80 font-medium">नियामक अनुपालन</span>
+                      {isIndia && result.complianceNotesHindi && (
+                        <span className="text-[10px] text-sky-300/80 font-medium">नियामक अनुपालन</span>
+                      )}
                     </div>
                     <p className="text-xs text-slate-300 leading-relaxed">
                       {result.complianceNotes}
                     </p>
-                    {result.complianceNotesHindi && (
+                    {isIndia && result.complianceNotesHindi && (
                       <p className="text-xs text-sky-200/90 mt-1.5 border-t border-slate-800/60 pt-1.5 leading-relaxed">
                         {result.complianceNotesHindi}
                       </p>
@@ -308,7 +313,7 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Flagged Ingredients of Concern (Bilingual: English + Hindi) */}
+                {/* Flagged Ingredients of Concern (Hindi shown only for India) */}
                 {result.flaggedIngredients?.length > 0 && (
                   <div className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800">
                     <div className="flex items-center justify-between mb-2.5">
@@ -320,14 +325,16 @@ export default function Home() {
                           Ingredients of Concern
                         </h3>
                       </div>
-                      <span className="text-[10px] text-rose-300/80 font-medium">चिंताजनक सामग्री</span>
+                      {isIndia && (
+                        <span className="text-[10px] text-rose-300/80 font-medium">चिंताजनक सामग्री</span>
+                      )}
                     </div>
                     <div className="space-y-2">
                       {result.flaggedIngredients.map((item: any, i: number) => (
                         <div key={i} className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 text-xs">
                           <div className="font-semibold text-rose-200">{item.name}</div>
                           <div className="text-[11px] text-slate-400 mt-0.5">{item.concern}</div>
-                          {item.concernHindi && (
+                          {isIndia && item.concernHindi && (
                             <div className="text-[11px] text-rose-300/80 mt-1 border-t border-slate-800/50 pt-1">
                               {item.concernHindi}
                             </div>
@@ -354,7 +361,7 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* 3. LOCAL MARKET ALTERNATIVES (With Direct Hyperlinks) */}
+                {/* 3. LOCAL MARKET ALTERNATIVES */}
                 <div className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800">
                   <div className="flex items-center justify-between mb-3">
                     <div>
@@ -403,7 +410,7 @@ export default function Home() {
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-950/50 hover:bg-emerald-950/80 border border-emerald-800/60 px-3 py-1.5 rounded-xl transition-all"
                                 >
-                                  <span>Buy on {userCountry === "India" ? "Amazon.in" : "Market"}</span>
+                                  <span>Buy on {isIndia ? "Amazon.in" : "Market"}</span>
                                   <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
                                     <path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
                                   </svg>
