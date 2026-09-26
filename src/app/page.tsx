@@ -163,8 +163,10 @@ export default function Home() {
               </div>
 
               <h2 className="text-base font-bold text-white tracking-tight">Scan Food Package</h2>
-              <p className="text-xs text-slate-400 mt-1 max-w-[250px] leading-relaxed">
-                Take a new picture or choose existing photos from your device gallery.
+              
+              {/* Comprehensive instructional hint */}
+              <p className="text-xs text-slate-300 mt-2 max-w-[280px] leading-relaxed">
+                Take a new picture or choose existing photos of the <span className="font-semibold text-emerald-400">ingredient list</span>, <span className="font-semibold text-emerald-400">nutrition table</span>, or <span className="font-semibold text-emerald-400">QR code / barcode</span> from your device gallery.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-2.5 w-full mt-5">
