@@ -171,11 +171,11 @@ ALTERNATIVES:
           result.alternatives = result.alternatives.map((alt: any) => {
             const cleanTitle = `${alt.brand} ${alt.productName}`;
             const encodedTitle = encodeURIComponent(cleanTitle);
-            
-            // Site-targeted exact link resolution
+
+            // Direct auto-forward straight to the product page
             const purchaseUrl = isIndiaMarket
-              ? `https://www.google.com/search?q=site:amazon.in+${encodedTitle}`
-              : `https://www.google.com/search?tbm=shop&q=${encodedTitle}`;
+              ? `https://www.google.com/search?q=site:amazon.in/dp+OR+site:amazon.in/gp/product+${encodedTitle}&btnI=1`
+              : `https://www.google.com/search?q=site:amazon.com/dp/+${encodedTitle}&btnI=1`;
 
             return {
               ...alt,

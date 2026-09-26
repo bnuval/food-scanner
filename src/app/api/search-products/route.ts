@@ -107,27 +107,27 @@ CRITERIA:
 
             const stores = [];
             if (isIndia) {
-              // Direct targeted search passing through site-specific Google indexing for exact matching
+              // btnI=1 executes "I'm Feeling Lucky" which jumps straight to the product page
               stores.push({
                 name: "Amazon",
-                url: `https://www.google.com/search?q=site:amazon.in+${encodedTitle}`,
+                url: `https://www.google.com/search?q=site:amazon.in/dp+OR+site:amazon.in/gp/product+${encodedTitle}&btnI=1`,
                 badgeColor: "bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20",
               });
               stores.push({
                 name: "Flipkart",
-                url: `https://www.google.com/search?q=site:flipkart.com+${encodedTitle}`,
+                url: `https://www.google.com/search?q=site:flipkart.com/p/+${encodedTitle}&btnI=1`,
                 badgeColor: "bg-sky-500/10 text-sky-400 border-sky-500/30 hover:bg-sky-500/20",
               });
               if (categoryType === "cosmetics") {
                 stores.push({
                   name: "Nykaa",
-                  url: `https://www.google.com/search?q=site:nykaa.com+${encodedTitle}`,
+                  url: `https://www.google.com/search?q=site:nykaa.com+${encodedTitle}&btnI=1`,
                   badgeColor: "bg-pink-500/10 text-pink-400 border-pink-500/30 hover:bg-pink-500/20",
                 });
               } else {
                 stores.push({
                   name: "Blinkit",
-                  url: `https://www.google.com/search?q=site:blinkit.com+${encodedTitle}`,
+                  url: `https://www.google.com/search?q=site:blinkit.com/prn/+${encodedTitle}&btnI=1`,
                   badgeColor: "bg-yellow-500/10 text-yellow-400 border-yellow-500/30 hover:bg-yellow-500/20",
                 });
               }
@@ -139,24 +139,24 @@ CRITERIA:
             } else if (detectedCountry.toLowerCase().includes("united states")) {
               stores.push({
                 name: "Amazon",
-                url: `https://www.google.com/search?q=site:amazon.com+${encodedTitle}`,
+                url: `https://www.google.com/search?q=site:amazon.com/dp/+${encodedTitle}&btnI=1`,
                 badgeColor: "bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20",
               });
               stores.push({
                 name: "Walmart",
-                url: `https://www.google.com/search?q=site:walmart.com+${encodedTitle}`,
+                url: `https://www.google.com/search?q=site:walmart.com/ip/+${encodedTitle}&btnI=1`,
                 badgeColor: "bg-blue-500/10 text-blue-400 border-blue-500/30 hover:bg-blue-500/20",
               });
               if (categoryType === "cosmetics") {
                 stores.push({
                   name: "Sephora",
-                  url: `https://www.google.com/search?q=site:sephora.com+${encodedTitle}`,
+                  url: `https://www.google.com/search?q=site:sephora.com/product/+${encodedTitle}&btnI=1`,
                   badgeColor: "bg-pink-500/10 text-pink-400 border-pink-500/30 hover:bg-pink-500/20",
                 });
               } else {
                 stores.push({
                   name: "Target",
-                  url: `https://www.google.com/search?q=site:target.com+${encodedTitle}`,
+                  url: `https://www.google.com/search?q=site:target.com/p/+${encodedTitle}&btnI=1`,
                   badgeColor: "bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20",
                 });
               }
@@ -168,7 +168,7 @@ CRITERIA:
             } else {
               stores.push({
                 name: "Amazon",
-                url: `https://www.google.com/search?q=site:amazon.com+${encodedTitle}`,
+                url: `https://www.google.com/search?q=site:amazon.com+${encodedTitle}&btnI=1`,
                 badgeColor: "bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20",
               });
               stores.push({
