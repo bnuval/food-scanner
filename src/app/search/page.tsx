@@ -3,18 +3,27 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
-interface StoreOption {
-  name: string;
-  badge: string;
-  url: string;
-  color: string;
-  category: "all" | "food" | "cosmetics";
+interface ProductResult {
+  brand: string;
+  productName: string;
+  healthScore: number;
+  verdictReason: string;
+  keyIngredients?: string[];
+  highlights?: string[];
+  stores: {
+    name: string;
+    url: string;
+    badgeColor: string;
+  }[];
 }
 
 export default function SearchPage() {
   const [query, setQuery] = useState("");
   const [categoryType, setCategoryType] = useState<"food" | "cosmetics">("food");
   const [userCountry, setUserCountry] = useState("India");
+  const [loading, setLoading] = useState(false);
+  const [products, setProducts] = useState<ProductResult[]>([]);
+  const [hasSearched, setHasSearched] = useState(false);
 
   useEffect(() => {
     try {
@@ -39,117 +48,50 @@ export default function SearchPage() {
     }
   }, []);
 
-  const getStoreLinks = (searchQuery: string): StoreOption[] => {
-    const q = encodeURIComponent(searchQuery.trim());
-    if (!q) return [];
+  const handleSearch = async (searchTerm?: string) => {
+    const finalQuery = searchTerm || query;
+    if (!finalQuery.trim()) return;
 
-    if (userCountry === "India") {
-      return [
-        {
-          name: "Amazon India",
-          badge: "E-Commerce",
-          url: `https://www.amazon.in/s?k=${q}`,
-          color: "hover:border-amber-500/60 hover:bg-amber-950/20 text-amber-400",
-          category: "all",
-        },
-        {
-          name: "Flipkart",
-          badge: "E-Commerce",
-          url: `https://www.flipkart.com/search?q=${q}`,
-          color: "hover:border-sky-500/60 hover:bg-sky-950/20 text-sky-400",
-          category: "all",
-        },
-        {
-          name: "Blinkit",
-          badge: "10-Min Grocery",
-          url: `https://blinkit.com/s/?q=${q}`,
-          color: "hover:border-yellow-500/60 hover:bg-yellow-950/20 text-yellow-400",
-          category: "food",
-        },
-        {
-          name: "Zepto",
-          badge: "Instant Delivery",
-          url: `https://www.zeptonow.com/search?query=${q}`,
-          color: "hover:border-purple-500/60 hover:bg-purple-950/20 text-purple-400",
-          category: "food",
-        },
-        {
-          name: "Nykaa",
-          badge: "Beauty & Personal Care",
-          url: `https://www.nykaa.com/search/result/?q=${q}`,
-          color: "hover:border-pink-500/60 hover:bg-pink-950/20 text-pink-400",
-          category: "cosmetics",
-        },
-      ];
+    setLoading(true);
+    setHasSearched(true);
+
+    try {
+      const res = await fetch("/api/search-products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: finalQuery,
+          categoryType,
+          userCountry,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Search failed");
+      setProducts(data.products || []);
+    } catch (err: any) {
+      alert(err.message || "Failed to find products");
+    } finally {
+      setLoading(false);
     }
-
-    if (userCountry === "United States") {
-      return [
-        {
-          name: "Amazon US",
-          badge: "E-Commerce",
-          url: `https://www.amazon.com/s?k=${q}`,
-          color: "hover:border-amber-500/60 hover:bg-amber-950/20 text-amber-400",
-          category: "all",
-        },
-        {
-          name: "Walmart",
-          badge: "Retail & Grocery",
-          url: `https://www.walmart.com/search?q=${q}`,
-          color: "hover:border-blue-500/60 hover:bg-blue-950/20 text-blue-400",
-          category: "all",
-        },
-        {
-          name: "Target",
-          badge: "Retail & Grocery",
-          url: `https://www.target.com/s?searchTerm=${q}`,
-          color: "hover:border-rose-500/60 hover:bg-rose-950/20 text-rose-400",
-          category: "all",
-        },
-        {
-          name: "Sephora",
-          badge: "Cosmetics & Skincare",
-          url: `https://www.sephora.com/search?keyword=${q}`,
-          color: "hover:border-pink-500/60 hover:bg-pink-950/20 text-pink-400",
-          category: "cosmetics",
-        },
-      ];
-    }
-
-    // Default international fallback
-    return [
-      {
-        name: `Amazon (${userCountry})`,
-        badge: "Global E-Commerce",
-        url: `https://www.amazon.com/s?k=${q}`,
-        color: "hover:border-amber-500/60 hover:bg-amber-950/20 text-amber-400",
-        category: "all",
-      },
-      {
-        name: "Google Shopping",
-        badge: "Compare Local Stores",
-        url: `https://www.google.com/search?tbm=shop&q=${q}`,
-        color: "hover:border-emerald-500/60 hover:bg-emerald-950/20 text-emerald-400",
-        category: "all",
-      },
-    ];
   };
 
-  const storeOptions = getStoreLinks(query).filter(
-    (store) => store.category === "all" || store.category === categoryType
-  );
+  const handleQuickTag = (tag: string) => {
+    setQuery(tag);
+    handleSearch(tag);
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex justify-center py-6 px-3 sm:px-4">
       <main className="w-full max-w-md flex flex-col gap-4">
-        {/* Navigation & Header */}
+        {/* Header */}
         <header className="flex items-center justify-between px-2 pb-2 border-b border-slate-800">
           <div>
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
               <h1 className="text-xl font-extrabold tracking-tight text-white">PureBite AI</h1>
             </div>
-            <p className="text-[11px] text-slate-400 font-medium">Multi-Platform Product Search</p>
+            <p className="text-[11px] text-slate-400 font-medium">Certified Healthy Product Finder</p>
           </div>
           <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-full">
             <span className="text-[10px] text-slate-400 font-medium">Market:</span>
@@ -157,7 +99,7 @@ export default function SearchPage() {
           </div>
         </header>
 
-        {/* Top Tab Bar: Switch between Scanner and Search */}
+        {/* Tab Bar */}
         <nav className="flex rounded-2xl bg-slate-900/90 p-1 border border-slate-800">
           <Link
             href="/"
@@ -175,61 +117,74 @@ export default function SearchPage() {
           {/* Category Toggle */}
           <div className="flex gap-2 mb-4">
             <button
-              onClick={() => setCategoryType("food")}
+              onClick={() => {
+                setCategoryType("food");
+                setProducts([]);
+                setHasSearched(false);
+              }}
               className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all ${
                 categoryType === "food"
                   ? "bg-slate-800 text-emerald-400 border border-emerald-500/30"
                   : "bg-slate-950/60 text-slate-400 border border-slate-800 hover:text-slate-200"
               }`}
             >
-              🥗 Food & Grocery
+              🥗 Clean Food
             </button>
             <button
-              onClick={() => setCategoryType("cosmetics")}
+              onClick={() => {
+                setCategoryType("cosmetics");
+                setProducts([]);
+                setHasSearched(false);
+              }}
               className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all ${
                 categoryType === "cosmetics"
                   ? "bg-slate-800 text-pink-400 border border-pink-500/30"
                   : "bg-slate-950/60 text-slate-400 border border-slate-800 hover:text-slate-200"
               }`}
             >
-              💄 Cosmetics & Care
+              💄 Safe Cosmetics
             </button>
           </div>
 
-          <div className="relative">
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSearch();
+            }}
+            className="relative"
+          >
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={
                 categoryType === "food"
-                  ? "Search organic peanut butter, ketchup, oats..."
-                  : "Search mineral sunscreen, sulfate-free shampoo..."
+                  ? "Search organic ketchup, dark chocolate, oats..."
+                  : "Search mineral sunscreen, toxin-free face wash..."
               }
-              className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 text-xs text-white rounded-2xl py-3.5 pl-4 pr-10 outline-none transition-all placeholder:text-slate-500"
+              className="w-full bg-slate-950 border border-slate-800 focus:border-emerald-500 text-xs text-white rounded-2xl py-3.5 pl-4 pr-24 outline-none transition-all placeholder:text-slate-500"
             />
-            {query && (
-              <button
-                onClick={() => setQuery("")}
-                aria-label="Clear search input"
-                className="absolute right-3.5 top-3.5 text-slate-400 hover:text-white text-xs"
-              >
-                &#x2715;
-              </button>
-            )}
-          </div>
+            <button
+              type="submit"
+              disabled={loading || !query.trim()}
+              className="absolute right-1.5 top-1.5 bottom-1.5 px-4 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold text-xs rounded-xl transition-all"
+            >
+              {loading ? "..." : "Search"}
+            </button>
+          </form>
 
-          {/* Quick suggestions */}
+          {/* Quick Suggestions */}
           <div className="mt-3 flex flex-wrap gap-1.5">
             <span className="text-[10px] text-slate-500 self-center mr-1">Trending:</span>
             {(categoryType === "food"
-              ? ["Whole Truth Bar", "Jaggery Ketchup", "Cold Pressed Oil", "Rolled Oats"]
-              : ["Ceramide Moisturizer", "Zinc Sunscreen", "Niacinamide Serum", "Herbal Lip Balm"]
+              ? ["Tomato Ketchup", "Peanut Butter", "Protein Bar", "Cold Pressed Oil"]
+              : ["Mineral Sunscreen", "Niacinamide", "Hair Oil", "Lip Balm"]
             ).map((item, i) => (
               <button
                 key={i}
-                onClick={() => setQuery(item)}
-                className="text-[10px] bg-slate-950/80 hover:bg-slate-800 text-slate-300 border border-slate-800 px-2 py-0.5 rounded-lg transition-colors"
+                type="button"
+                onClick={() => handleQuickTag(item)}
+                className="text-[10px] bg-slate-950/80 hover:bg-slate-800 text-slate-300 border border-slate-800 px-2.5 py-1 rounded-lg transition-colors"
               >
                 {item}
               </button>
@@ -237,69 +192,128 @@ export default function SearchPage() {
           </div>
         </section>
 
-        {/* Store Results Grid */}
-        <section className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="text-xs font-bold text-white uppercase tracking-wider">
-                Compare Across Local Platforms
-              </h2>
-              <p className="text-[10px] text-slate-400">
-                Direct search links for {userCountry} stores
-              </p>
-            </div>
-            <span className="text-[10px] text-emerald-400 font-mono">Live Link</span>
+        {/* Loading Skeleton */}
+        {loading && (
+          <div className="bg-slate-900/80 rounded-3xl p-5 border border-slate-800 animate-pulse flex flex-col gap-3">
+            <div className="h-24 bg-slate-800 rounded-2xl"></div>
+            <div className="h-24 bg-slate-800/70 rounded-2xl"></div>
+            <div className="h-24 bg-slate-800/40 rounded-2xl"></div>
           </div>
+        )}
 
-          {query.trim().length > 0 ? (
-            <div className="space-y-2.5">
-              {storeOptions.map((store, i) => (
-                <a
-                  key={i}
-                  href={store.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`flex items-center justify-between p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 ${store.color} transition-all group`}
+        {/* Results Section */}
+        {!loading && hasSearched && (
+          <section className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <div>
+                <h2 className="text-xs font-bold text-white uppercase tracking-wider">
+                  Top-Rated Healthy Picks
+                </h2>
+                <p className="text-[10px] text-slate-400">
+                  Standardized clean-label score (75-100) available in {userCountry}
+                </p>
+              </div>
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/50 px-2 py-0.5 rounded-full">
+                {products.length} Vetted
+              </span>
+            </div>
+
+            {products.length > 0 ? (
+              products.map((item, idx) => (
+                <div
+                  key={idx}
+                  className="p-4 bg-slate-900/90 rounded-3xl border border-slate-800 shadow-xl space-y-3"
                 >
-                  <div className="flex flex-col">
-                    <span className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors">
-                      {store.name}
-                    </span>
-                    <span className="text-[10px] text-slate-400 mt-0.5">{store.badge}</span>
+                  {/* Brand & Score Header */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400">
+                        {item.brand}
+                      </span>
+                      <h3 className="text-sm font-bold text-white leading-tight">
+                        {item.productName}
+                      </h3>
+                    </div>
+                    <div className="flex flex-col items-end flex-shrink-0">
+                      <span className="text-xs font-black font-mono text-emerald-300 bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-700/50">
+                        {item.healthScore}/100
+                      </span>
+                      <span className="text-[9px] uppercase tracking-wider text-emerald-400 font-bold mt-0.5">
+                        BUY VERIFIED
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs font-bold">
-                    <span>Search</span>
-                    <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                      <path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
-                    </svg>
-                  </div>
-                </a>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 bg-slate-950/40 rounded-2xl border border-slate-800">
-              <svg
-                className="w-8 h-8 text-slate-600 mx-auto mb-2"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-              <p className="text-xs text-slate-400 font-medium">Type any food or cosmetic item above</p>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                We will generate instant comparison search links for Flipkart, Amazon, and local quick-commerce stores.
-              </p>
-            </div>
-          )}
-        </section>
 
-        {/* Legal / Educational Disclaimer */}
+                  {/* Why it is clean */}
+                  <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/60">
+                    {item.verdictReason}
+                  </p>
+
+                  {/* Key Highlights / Ingredients */}
+                  {item.highlights && item.highlights.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {item.highlights.map((h, i) => (
+                        <span
+                          key={i}
+                          className="text-[10px] bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md border border-slate-700"
+                        >
+                          ✓ {h}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Direct Store Buy Buttons */}
+                  <div className="pt-2 border-t border-slate-800/80">
+                    <span className="text-[10px] text-slate-400 font-medium block mb-1.5">
+                      Buy directly on:
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {item.stores.map((store, sIdx) => (
+                        <a
+                          key={sIdx}
+                          href={store.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`inline-flex items-center gap-1 text-[11px] font-bold px-3 py-1.5 rounded-xl border transition-all ${store.badgeColor}`}
+                        >
+                          <span>{store.name}</span>
+                          <svg className="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24">
+                            <path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z" />
+                          </svg>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-6 bg-slate-900/60 rounded-3xl border border-slate-800">
+                <p className="text-xs text-slate-400">
+                  No verified healthy options found for this specific query. Try a general term like "Peanut Butter" or "Ketchup".
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Initial Prompt State */}
+        {!hasSearched && (
+          <div className="text-center py-10 px-4 bg-slate-900/40 rounded-3xl border border-slate-800/80">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-950/60 border border-emerald-800/40 flex items-center justify-center mx-auto mb-3">
+              <span className="text-xl">✨</span>
+            </div>
+            <h3 className="text-sm font-bold text-white">Find Certified Clean Products</h3>
+            <p className="text-xs text-slate-400 mt-1 max-w-[280px] mx-auto leading-relaxed">
+              Search any food or personal care item to discover products rated 75+ with direct links to Amazon, Flipkart, Blinkit, and local stores.
+            </p>
+          </div>
+        )}
+
+        {/* Disclaimer */}
         <footer className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 text-center">
           <p className="text-[11px] text-slate-400 leading-relaxed font-normal">
-            <span className="font-semibold text-slate-300">Disclaimer:</span> Product search links are generated for direct multi-platform convenience. Always verify complete ingredients and certification marks on retailer sites.
+            <span className="font-semibold text-slate-300">Disclaimer:</span> Nutritional and cosmetic scores are evaluated for informational and educational purposes using clean-label standards. Always review ingredient packaging before consumption.
           </p>
         </footer>
       </main>
