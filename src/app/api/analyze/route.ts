@@ -65,24 +65,15 @@ YUKA EXACT SCORING ARCHITECTURE (0 to 100):
 1. Nutritional Quality (60% of total score):
    - Evaluated via the international Nutri-Score / FSA system.
    - For condiments/sauces, factor the realistic serving size (15g-30g RACC) against Daily Values.
-   - Balances negative points (energy, sugars, saturated fat, sodium) against positive points (fiber, protein, fruit/vegetable percentage).
 2. Food Additives & Toxicological Impact (30% of total score):
    - Evaluate all additives, preservatives, emulsifiers, and colors.
-   - Heavy penalties for high-risk additives: Sodium Benzoate (INS 211), Potassium Sorbate, BHA/BHT, synthetic food dyes (Red 40, Yellow 5/6), artificial sweeteners (Aspartame, Sucralose).
    - Zero penalty if no chemical additives/preservatives are present.
 3. Organic & Natural Certification (10% of total score):
    - Award 10 points for verified organic ingredients, unrefined whole-food sweetening (dates, jaggery), or minimal culinary processing.
 
 CALCULATE FINAL HEALTH SCORE (0 to 100):
-- Combine the three pillars into a single integer score between 0 and 100.
-- Calibrate to Yuka ranges:
-  * 75 to 100: Excellent (Clean ingredients, low/moderate sugar/sodium, no chemical additives).
-  * 50 to 74: Good (Clean label, but naturally higher in sugar or salt like clean sauces/condiments).
-  * 25 to 49: Mediocre / Poor (High in sugar/salt or contains controversial preservatives like sodium benzoate).
-  * 0 to 24: Bad (Ultra-processed, hazardous additives, chemical dyes).
-- Verdict Rules:
-  * "BUY" if healthScore >= 65
-  * "AVOID" if healthScore < 65
+- "BUY" if healthScore >= 65
+- "AVOID" if healthScore < 65
 
 LANGUAGE RULES:
 ${
@@ -90,8 +81,7 @@ ${
     ? `- Provide "primaryReason" in English AND "primaryReasonHindi" in Hindi.
        - Provide "complianceNotes" in English AND "complianceNotesHindi" in Hindi.
        - In "flaggedIngredients", provide "concern" in English AND "concernHindi" in Hindi.`
-    : `- The user is NOT in India (Browsing from "${detectedCountry}").
-       - Provide all text strictly in English. Leave "primaryReasonHindi", "complianceNotesHindi", and "concernHindi" as empty strings ("").`
+    : `- Provide all text strictly in English. Leave "primaryReasonHindi", "complianceNotesHindi", and "concernHindi" as empty strings ("").`
 }
 
 ALTERNATIVES:
@@ -179,10 +169,14 @@ ALTERNATIVES:
 
         if (result.alternatives && Array.isArray(result.alternatives)) {
           result.alternatives = result.alternatives.map((alt: any) => {
-            const query = encodeURIComponent(`${alt.brand} ${alt.productName}`);
+            const cleanTitle = `${alt.brand} ${alt.productName}`;
+            const encodedTitle = encodeURIComponent(cleanTitle);
+            
+            // Site-targeted exact link resolution
             const purchaseUrl = isIndiaMarket
-              ? `https://www.amazon.in/s?k=${query}`
-              : `https://www.google.com/search?q=${query}+buy+online`;
+              ? `https://www.google.com/search?q=site:amazon.in+${encodedTitle}`
+              : `https://www.google.com/search?tbm=shop&q=${encodedTitle}`;
+
             return {
               ...alt,
               purchaseUrl,
