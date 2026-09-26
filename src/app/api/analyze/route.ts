@@ -4,47 +4,118 @@ import { GoogleGenAI, Type } from "@google/genai";
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-// Deterministic Standard Nutrition Scoring Engine (NutriScore / Clean-Label Standard)
-function calculateDeterministicHealthScore(data: {
-  addedSugarPer100g?: number;
+// Official FSA / Ofcom / Nutri-Score Algorithm for 100g solid foods
+function computeOfficialNutriScore(metrics: {
+  energyKcalPer100g?: number;
+  totalSugarGPer100g?: number;
+  satFatGPer100g?: number;
   sodiumMgPer100g?: number;
-  hasPalmOil?: boolean;
-  hasSyntheticPreservatives?: boolean;
-  hasArtificialDyes?: boolean;
-  hasArtificialSweeteners?: boolean;
-  isNaturallySweetened?: boolean;
-  isCleanLabelWholeFood?: boolean;
+  fruitVegPerc?: number;
+  fiberGPer100g?: number;
+  proteinGPer100g?: number;
+  hasSyntheticPreservativeOrDye?: boolean;
+  hasIndustrialPalmFat?: boolean;
 }): { score: number; verdict: "BUY" | "AVOID" } {
-  let score = 100;
+  // 1. Calculate N Points (Negative Nutrients)
+  // Energy (kJ)
+  const energyKj = (metrics.energyKcalPer100g || 0) * 4.184;
+  let energyPts = 0;
+  if (energyKj > 3350) energyPts = 10;
+  else if (energyKj > 3015) energyPts = 9;
+  else if (energyKj > 2680) energyPts = 8;
+  else if (energyKj > 2345) energyPts = 7;
+  else if (energyKj > 2010) energyPts = 6;
+  else if (energyKj > 1675) energyPts = 5;
+  else if (energyKj > 1340) energyPts = 4;
+  else if (energyKj > 1005) energyPts = 3;
+  else if (energyKj > 670) energyPts = 2;
+  else if (energyKj > 335) energyPts = 1;
 
-  // 1. Harmful Additives & UPF Markers (Deterministic Penalties)
-  if (data.hasSyntheticPreservatives) score -= 30; // INS 211, Potassium Sorbate, etc.
-  if (data.hasPalmOil) score -= 25;
-  if (data.hasArtificialDyes) score -= 25;
-  if (data.hasArtificialSweeteners) score -= 20;
+  // Sugars (g/100g)
+  const sugars = metrics.totalSugarGPer100g || 0;
+  let sugarPts = 0;
+  if (sugars > 45) sugarPts = 10;
+  else if (sugars > 40) sugarPts = 9;
+  else if (sugars > 36) sugarPts = 8;
+  else if (sugars > 31) sugarPts = 7;
+  else if (sugars > 27) sugarPts = 6;
+  else if (sugars > 22.5) sugarPts = 5;
+  else if (sugars > 18) sugarPts = 4;
+  else if (sugars > 13.5) sugarPts = 3;
+  else if (sugars > 9) sugarPts = 2;
+  else if (sugars > 4.5) sugarPts = 1;
 
-  // 2. Macronutrient Thresholds (Exact per 100g standard)
-  const sugar = data.addedSugarPer100g || 0;
-  if (sugar > 5) {
-    // Deduct 1 point per 1.5g excess added sugar above 5g/100g (capped at 25)
-    const sugarDeduction = Math.min(25, Math.round((sugar - 5) / 1.5));
-    score -= sugarDeduction;
-  }
+  // Saturated Fat (g/100g)
+  const satFat = metrics.satFatGPer100g || 0;
+  let satFatPts = 0;
+  if (satFat > 10) satFatPts = 10;
+  else if (satFat > 9) satFatPts = 9;
+  else if (satFat > 8) satFatPts = 8;
+  else if (satFat > 7) satFatPts = 7;
+  else if (satFat > 6) satFatPts = 6;
+  else if (satFat > 5) satFatPts = 5;
+  else if (satFat > 4) satFatPts = 4;
+  else if (satFat > 3) satFatPts = 3;
+  else if (satFat > 2) satFatPts = 2;
+  else if (satFat > 1) satFatPts = 1;
 
-  const sodium = data.sodiumMgPer100g || 0;
-  if (sodium > 200) {
-    // Deduct 1 point per 75mg excess sodium above 200mg/100g (capped at 15)
-    const sodiumDeduction = Math.min(15, Math.round((sodium - 200) / 75));
-    score -= sodiumDeduction;
-  }
+  // Sodium (mg/100g)
+  const sodium = metrics.sodiumMgPer100g || 0;
+  let sodiumPts = 0;
+  if (sodium > 900) sodiumPts = 10;
+  else if (sodium > 810) sodiumPts = 9;
+  else if (sodium > 720) sodiumPts = 8;
+  else if (sodium > 630) sodiumPts = 7;
+  else if (sodium > 540) sodiumPts = 6;
+  else if (sodium > 450) sodiumPts = 5;
+  else if (sodium > 360) sodiumPts = 4;
+  else if (sodium > 270) sodiumPts = 3;
+  else if (sodium > 180) sodiumPts = 2;
+  else if (sodium > 90) sodiumPts = 1;
 
-  // 3. Whole Food Bonuses
-  if (data.isNaturallySweetened && !data.hasArtificialSweeteners) score += 3;
-  if (data.isCleanLabelWholeFood && !data.hasSyntheticPreservatives && !data.hasPalmOil) score += 4;
+  const totalN = energyPts + sugarPts + satFatPts + sodiumPts;
 
-  // Clamp score strictly between 0 and 100
-  score = Math.max(5, Math.min(98, score));
-  const verdict = score >= 70 ? "BUY" : "AVOID";
+  // 2. Calculate P Points (Positive Nutrients)
+  // Fruit / Veg %
+  const fv = metrics.fruitVegPerc || 0;
+  let fvPts = 0;
+  if (fv > 80) fvPts = 5;
+  else if (fv > 60) fvPts = 2;
+  else if (fv > 40) fvPts = 1;
+
+  // Fiber (g/100g)
+  const fiber = metrics.fiberGPer100g || 0;
+  let fiberPts = 0;
+  if (fiber > 4.7) fiberPts = 5;
+  else if (fiber > 3.7) fiberPts = 4;
+  else if (fiber > 2.8) fiberPts = 3;
+  else if (fiber > 1.9) fiberPts = 2;
+  else if (fiber > 0.9) fiberPts = 1;
+
+  // Protein (g/100g)
+  const protein = metrics.proteinGPer100g || 0;
+  let proteinPts = 0;
+  if (protein > 8.0) proteinPts = 5;
+  else if (protein > 6.4) proteinPts = 4;
+  else if (protein > 4.8) proteinPts = 3;
+  else if (protein > 3.2) proteinPts = 2;
+  else if (protein > 1.6) proteinPts = 1;
+
+  const totalP = fvPts + fiberPts + proteinPts;
+
+  // Raw FSA score: lower is healthier (-15 best, +40 worst)
+  let rawScore = totalN - totalP;
+
+  // UPF / Additive modifier (NOVA 4 penalty)
+  if (metrics.hasSyntheticPreservativeOrDye) rawScore += 8;
+  if (metrics.hasIndustrialPalmFat) rawScore += 6;
+
+  // Map to 0-100 scale:
+  // -15 maps to 100
+  // +40 maps to 0
+  const normalized = Math.round(100 - ((rawScore + 15) / 55) * 100);
+  const score = Math.max(5, Math.min(98, normalized));
+  const verdict = score >= 65 ? "BUY" : "AVOID";
 
   return { score, verdict };
 }
@@ -70,7 +141,7 @@ async function getAvailableVisionModels(): Promise<string[]> {
 
     if (candidateModels.length > 0) return candidateModels;
   } catch (err) {
-    console.warn("Could not fetch model list, using fallback priority list.");
+    console.warn("Using fallback priority models.");
   }
 
   return [
@@ -100,11 +171,12 @@ export async function POST(req: NextRequest) {
       },
     }));
 
-    const promptText = `You are a certified food quality auditor and OCR parser. Extract exact nutritional facts and identify ingredients from this packaging label.
+    const promptText = `You are a certified food labeling OCR parser and nutritionist.
+Parse the exact nutritional values per 100g and check ingredients on this label.
 
-USER LOCATION: "${detectedCountry}" (Timezone: ${detectedTz}).
+USER COUNTRY: "${detectedCountry}"
 
-LANGUAGE INSTRUCTIONS:
+LANGUAGE RULES:
 ${
   isIndiaMarket
     ? `- Provide "primaryReason" in English AND "primaryReasonHindi" in Hindi.
@@ -113,19 +185,20 @@ ${
     : `- Leave "primaryReasonHindi", "complianceNotesHindi", and "concernHindi" as empty strings ("").`
 }
 
-EXTRACTION RULES:
-1. Extract addedSugarPer100g (number in grams, or calculate per 100g if listed per serving).
-2. Extract sodiumMgPer100g (number in mg, or calculate per 100g if listed per serving).
-3. Check for Palm Oil / Hydrogenated fat (boolean).
-4. Check for Synthetic Preservatives like Sodium Benzoate / INS 211, Potassium Sorbate (boolean).
-5. Check for Synthetic Food Dyes (Red 40, Tartrazine, Sunset Yellow, etc.) (boolean).
-6. Check for Artificial Sweeteners (Sucralose, Aspartame, Acesulfame K) (boolean).
-7. Check if naturally sweetened with jaggery, honey, dates (boolean).
-8. Check if ingredient list is clean / free from chemical emulsifiers (boolean).
+NUTRITIONAL EXTRACTION (PER 100g STRICT):
+- energyKcalPer100g: number
+- totalSugarGPer100g: number
+- satFatGPer100g: number (if not listed, use 0)
+- sodiumMgPer100g: number
+- fruitVegPerc: percentage of fruit/vegetable/tomato paste content (e.g. 28% tomato paste = 28)
+- fiberGPer100g: number
+- proteinGPer100g: number
+- hasSyntheticPreservativeOrDye: boolean (true if Sodium Benzoate, INS 211, Sorbates, Tartrazine, Red 40, etc. are present)
+- hasIndustrialPalmFat: boolean (true if palm oil, palmolein, or hydrogenated fat is present)
 
-9. RECOMMENDATIONS:
-   - Provide 2 to 3 real alternative products in the same category commercially available in ${detectedCountry}.
-   - Give realistic benchmark scores.`;
+ALTERNATIVES:
+- Suggest 2 to 3 real alternative products in this food category available in ${detectedCountry}.
+- Estimate their nutritional scores using this same standard.`;
 
     const config = {
       temperature: 0,
@@ -137,25 +210,25 @@ EXTRACTION RULES:
           productName: { type: Type.STRING },
           brandName: { type: Type.STRING },
           category: { type: Type.STRING },
-          nutritionMetrics: {
+          fsaMetrics: {
             type: Type.OBJECT,
             properties: {
-              addedSugarPer100g: { type: Type.NUMBER },
+              energyKcalPer100g: { type: Type.NUMBER },
+              totalSugarGPer100g: { type: Type.NUMBER },
+              satFatGPer100g: { type: Type.NUMBER },
               sodiumMgPer100g: { type: Type.NUMBER },
-              hasPalmOil: { type: Type.BOOLEAN },
-              hasSyntheticPreservatives: { type: Type.BOOLEAN },
-              hasArtificialDyes: { type: Type.BOOLEAN },
-              hasArtificialSweeteners: { type: Type.BOOLEAN },
-              isNaturallySweetened: { type: Type.BOOLEAN },
-              isCleanLabelWholeFood: { type: Type.BOOLEAN },
+              fruitVegPerc: { type: Type.NUMBER },
+              fiberGPer100g: { type: Type.NUMBER },
+              proteinGPer100g: { type: Type.NUMBER },
+              hasSyntheticPreservativeOrDye: { type: Type.BOOLEAN },
+              hasIndustrialPalmFat: { type: Type.BOOLEAN },
             },
             required: [
-              "addedSugarPer100g",
+              "energyKcalPer100g",
+              "totalSugarGPer100g",
               "sodiumMgPer100g",
-              "hasPalmOil",
-              "hasSyntheticPreservatives",
-              "hasArtificialDyes",
-              "hasArtificialSweeteners",
+              "hasSyntheticPreservativeOrDye",
+              "hasIndustrialPalmFat",
             ],
           },
           primaryReason: { type: Type.STRING },
@@ -191,7 +264,7 @@ EXTRACTION RULES:
             },
           },
         },
-        required: ["isReadable", "nutritionMetrics", "primaryReason", "alternatives"],
+        required: ["isReadable", "fsaMetrics", "primaryReason", "alternatives"],
       },
     };
 
@@ -217,8 +290,8 @@ EXTRACTION RULES:
           return NextResponse.json(result);
         }
 
-        // Run the deterministic scoring engine in TypeScript code
-        const { score, verdict } = calculateDeterministicHealthScore(result.nutritionMetrics || {});
+        // Run the official Nutri-Score / FSA Profiling Algorithm
+        const { score, verdict } = computeOfficialNutriScore(result.fsaMetrics || {});
         result.healthScore = score;
         result.verdict = verdict;
 
