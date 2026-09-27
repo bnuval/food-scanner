@@ -2,16 +2,11 @@
 import { Redis } from "@upstash/redis";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-function getCleanEnv(val: string | undefined): string | undefined {
-  if (!val) return undefined;
-  return val.trim().replace(/^["']|["']$/g, "");
-}
-
-function getRedisClient() {
-  const url = getCleanEnv(process.env.UPSTASH_REDIS_REST_URL);
-  const token = getCleanEnv(process.env.UPSTASH_REDIS_REST_TOKEN);
-
+function getRedis() {
+  const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
   if (!url || !token) return null;
   return new Redis({ url, token });
 }
@@ -23,7 +18,7 @@ export async function POST(req: NextRequest) {
     const visitedPath = path || "/";
     const today = new Date().toISOString().split("T")[0];
 
-    const redis = getRedisClient();
+    const redis = getRedis();
 
     if (redis) {
       await Promise.all([
