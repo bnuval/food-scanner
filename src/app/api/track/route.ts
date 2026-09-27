@@ -1,9 +1,17 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { Redis } from "@upstash/redis";
 
+export const dynamic = "force-dynamic";
+
+function getCleanEnv(val: string | undefined): string | undefined {
+  if (!val) return undefined;
+  return val.trim().replace(/^["']|["']$/g, "");
+}
+
 function getRedisClient() {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = getCleanEnv(process.env.UPSTASH_REDIS_REST_URL);
+  const token = getCleanEnv(process.env.UPSTASH_REDIS_REST_TOKEN);
+
   if (!url || !token) return null;
   return new Redis({ url, token });
 }
@@ -11,7 +19,7 @@ function getRedisClient() {
 export async function POST(req: NextRequest) {
   try {
     const { path, country } = await req.json();
-    const detectedCountry = country || "Unknown";
+    const detectedCountry = country || "India";
     const visitedPath = path || "/";
     const today = new Date().toISOString().split("T")[0];
 
@@ -39,6 +47,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, connected: !!redis });
   } catch (err: any) {
     console.error("Track error:", err);
-    return NextResponse.json({ success: false }, { status: 500 });
+    return NextResponse.json({ success: false, error: err?.message }, { status: 500 });
   }
 }

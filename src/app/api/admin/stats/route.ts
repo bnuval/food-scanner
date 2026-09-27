@@ -1,32 +1,50 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { Redis } from "@upstash/redis";
 
-function getRedisClient() {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
-  if (!url || !token) return null;
-  return new Redis({ url, token });
+export const dynamic = "force-dynamic";
+
+function getCleanEnv(val: string | undefined): string | undefined {
+  if (!val) return undefined;
+  return val.trim().replace(/^["']|["']$/g, "");
 }
 
 export async function POST(req: NextRequest) {
   try {
     const { password } = await req.json();
-    const expectedPassword = process.env.ADMIN_PASSWORD || "PureBiteAdmin2026";
+    const expectedPassword = getCleanEnv(process.env.ADMIN_PASSWORD) || "PureBiteAdmin2026";
 
     if (!password || password !== expectedPassword) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    const redis = getRedisClient();
+    const rawUrl = process.env.UPSTASH_REDIS_REST_URL;
+    const rawToken = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-    if (!redis) {
+    const url = getCleanEnv(rawUrl);
+    const token = getCleanEnv(rawToken);
+
+    if (!url || !token) {
       return NextResponse.json({
         totalVisits: 0,
         countryCounts: {},
         pageCounts: {},
         dailyVisits: {},
         recentVisitors: [],
-        notice: "Upstash Redis environment variables not yet connected.",
+        notice: `Variables detected in environment: URL: ${rawUrl ? "Found" : "Missing"}, Token: ${rawToken ? "Found" : "Missing"}.`,
+      });
+    }
+
+    let redis: Redis;
+    try {
+      redis = new Redis({ url, token });
+    } catch (e: any) {
+      return NextResponse.json({
+        totalVisits: 0,
+        countryCounts: {},
+        pageCounts: {},
+        dailyVisits: {},
+        recentVisitors: [],
+        notice: `Redis initialization error: ${e?.message}`,
       });
     }
 
@@ -61,6 +79,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err: any) {
     console.error("Stats fetch error:", err);
-    return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
+    return NextResponse.json({ error: `Connection failed: ${err?.message || "Unknown error"}` }, { status: 500 });
   }
 }
