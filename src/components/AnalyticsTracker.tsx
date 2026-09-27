@@ -7,7 +7,6 @@ export default function AnalyticsTracker() {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Do not track admin views
     if (pathname.startsWith("/admin")) return;
 
     try {
