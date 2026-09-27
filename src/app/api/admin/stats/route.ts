@@ -1,30 +1,63 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
+import { Redis } from "@upstash/redis";
+
+const redis =
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+    ? Redis.fromEnv()
+    : null;
 
 export async function POST(req: NextRequest) {
   try {
     const { password } = await req.json();
-
-    // Set your secure admin password here (or use process.env.ADMIN_PASSWORD)
     const expectedPassword = process.env.ADMIN_PASSWORD || "PureBiteAdmin2026";
 
     if (!password || password !== expectedPassword) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    const stats = globalThis.__purebite_analytics || {
-      totalVisits: 0,
-      countryCounts: {},
-      pageCounts: {},
-      recentVisitors: [],
-    };
+    if (!redis) {
+      return NextResponse.json({
+        totalVisits: 0,
+        countryCounts: {},
+        pageCounts: {},
+        dailyVisits: {},
+        recentVisitors: [],
+        notice: "Upstash Redis environment variables not yet connected.",
+      });
+    }
+
+    // Retrieve all historical data in parallel
+    const [
+      totalVisits,
+      countryCounts,
+      pageCounts,
+      dailyVisits,
+      recentRaw,
+    ] = await Promise.all([
+      redis.get<number>("analytics:total_visits"),
+      redis.hgetall<Record<string, number>>("analytics:countries"),
+      redis.hgetall<Record<string, number>>("analytics:pages"),
+      redis.hgetall<Record<string, number>>("analytics:daily_visits"),
+      redis.lrange<string>("analytics:recent_visitors", 0, 40),
+    ]);
+
+    const recentVisitors = (recentRaw || []).map((item) => {
+      try {
+        return typeof item === "string" ? JSON.parse(item) : item;
+      } catch {
+        return item;
+      }
+    });
 
     return NextResponse.json({
-      totalVisits: stats.totalVisits,
-      countryCounts: stats.countryCounts,
-      pageCounts: stats.pageCounts,
-      recentVisitors: stats.recentVisitors.slice(0, 30),
+      totalVisits: Number(totalVisits) || 0,
+      countryCounts: countryCounts || {},
+      pageCounts: pageCounts || {},
+      dailyVisits: dailyVisits || {},
+      recentVisitors,
     });
-  } catch {
+  } catch (err: any) {
+    console.error("Stats fetch error:", err);
     return NextResponse.json({ error: "Failed to fetch stats" }, { status: 500 });
   }
 }
