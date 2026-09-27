@@ -1,10 +1,12 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
 import { Redis } from "@upstash/redis";
 
-const redis =
-  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
-    ? Redis.fromEnv()
-    : null;
+function getRedisClient() {
+  const url = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+  return new Redis({ url, token });
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,6 +16,8 @@ export async function POST(req: NextRequest) {
     if (!password || password !== expectedPassword) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
+
+    const redis = getRedisClient();
 
     if (!redis) {
       return NextResponse.json({
@@ -26,7 +30,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Retrieve all historical data in parallel
     const [
       totalVisits,
       countryCounts,
