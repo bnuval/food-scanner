@@ -1,8 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
-import { Redis } from "@upstash/redis";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,8 +11,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
-    const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
+    // Direct lookup supporting standard and NEXT_PUBLIC fallbacks
+    const url = (process.env.UPSTASH_REDIS_REST_URL || process.env["UPSTASH_REDIS_REST_URL"])?.trim();
+    const token = (process.env.UPSTASH_REDIS_REST_TOKEN || process.env["UPSTASH_REDIS_REST_TOKEN"])?.trim();
 
     if (!url || !token) {
       return NextResponse.json({
@@ -27,23 +26,40 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const redis = new Redis({ url, token });
+    // Helper to query Upstash REST API directly
+    const runRedisCommand = async (command: string[]) => {
+      const res = await fetch(`${url}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(command),
+        cache: "no-store",
+      });
+      const data = await res.json();
+      return data.result;
+    };
 
-    const [
-      totalVisits,
-      countryCounts,
-      pageCounts,
-      dailyVisits,
-      recentRaw,
-    ] = await Promise.all([
-      redis.get<number>("analytics:total_visits"),
-      redis.hgetall<Record<string, number>>("analytics:countries"),
-      redis.hgetall<Record<string, number>>("analytics:pages"),
-      redis.hgetall<Record<string, number>>("analytics:daily_visits"),
-      redis.lrange<string>("analytics:recent_visitors", 0, 40),
+    // Helper to parse Redis HGETALL array into an object
+    const parseHashArray = (arr: any): Record<string, number> => {
+      if (!arr || !Array.isArray(arr)) return {};
+      const obj: Record<string, number> = {};
+      for (let i = 0; i < arr.length; i += 2) {
+        obj[arr[i]] = Number(arr[i + 1]) || 0;
+      }
+      return obj;
+    };
+
+    const [totalVisits, countriesRaw, pagesRaw, dailyVisitsRaw, recentRaw] = await Promise.all([
+      runRedisCommand(["GET", "analytics:total_visits"]),
+      runRedisCommand(["HGETALL", "analytics:countries"]),
+      runRedisCommand(["HGETALL", "analytics:pages"]),
+      runRedisCommand(["HGETALL", "analytics:daily_visits"]),
+      runRedisCommand(["LRANGE", "analytics:recent_visitors", "0", "40"]),
     ]);
 
-    const recentVisitors = (recentRaw || []).map((item) => {
+    const recentVisitors = (recentRaw || []).map((item: any) => {
       try {
         return typeof item === "string" ? JSON.parse(item) : item;
       } catch {
@@ -53,9 +69,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       totalVisits: Number(totalVisits) || 0,
-      countryCounts: countryCounts || {},
-      pageCounts: pageCounts || {},
-      dailyVisits: dailyVisits || {},
+      countryCounts: parseHashArray(countriesRaw),
+      pageCounts: parseHashArray(pagesRaw),
+      dailyVisits: parseHashArray(dailyVisitsRaw),
       recentVisitors,
     });
   } catch (err: any) {

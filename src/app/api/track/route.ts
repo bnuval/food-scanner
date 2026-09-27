@@ -1,15 +1,6 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
-import { Redis } from "@upstash/redis";
 
 export const dynamic = "force-dynamic";
-export const runtime = "nodejs";
-
-function getRedis() {
-  const url = process.env.UPSTASH_REDIS_REST_URL?.trim();
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
-  if (!url || !token) return null;
-  return new Redis({ url, token });
-}
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,30 +9,39 @@ export async function POST(req: NextRequest) {
     const visitedPath = path || "/";
     const today = new Date().toISOString().split("T")[0];
 
-    const redis = getRedis();
+    const url = (process.env.UPSTASH_REDIS_REST_URL || process.env["UPSTASH_REDIS_REST_URL"])?.trim();
+    const token = (process.env.UPSTASH_REDIS_REST_TOKEN || process.env["UPSTASH_REDIS_REST_TOKEN"])?.trim();
 
-    if (redis) {
-      await Promise.all([
-        redis.incr("analytics:total_visits"),
-        redis.hincrby("analytics:countries", detectedCountry, 1),
-        redis.hincrby("analytics:pages", visitedPath, 1),
-        redis.hincrby("analytics:daily_visits", today, 1),
-        redis.hincrby(`analytics:day:${today}:countries`, detectedCountry, 1),
-        redis.lpush(
-          "analytics:recent_visitors",
-          JSON.stringify({
-            timestamp: new Date().toISOString(),
-            country: detectedCountry,
-            path: visitedPath,
-          })
-        ),
-      ]);
-      await redis.ltrim("analytics:recent_visitors", 0, 99);
+    if (url && token) {
+      const visitorEntry = JSON.stringify({
+        timestamp: new Date().toISOString(),
+        country: detectedCountry,
+        path: visitedPath,
+      });
+
+      // Pipeline all updates via Upstash REST /pipeline endpoint in a single HTTP roundtrip
+      await fetch(`${url}/pipeline`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify([
+          ["INCR", "analytics:total_visits"],
+          ["HINCRBY", "analytics:countries", detectedCountry, 1],
+          ["HINCRBY", "analytics:pages", visitedPath, 1],
+          ["HINCRBY", "analytics:daily_visits", today, 1],
+          ["HINCRBY", `analytics:day:${today}:countries`, detectedCountry, 1],
+          ["LPUSH", "analytics:recent_visitors", visitorEntry],
+          ["LTRIM", "analytics:recent_visitors", 0, 99],
+        ]),
+        cache: "no-store",
+      });
     }
 
-    return NextResponse.json({ success: true, connected: !!redis });
+    return NextResponse.json({ success: true, logged: Boolean(url && token) });
   } catch (err: any) {
     console.error("Track error:", err);
-    return NextResponse.json({ success: false, error: err?.message }, { status: 500 });
+    return NextResponse.json({ success: false }, { status: 500 });
   }
 }
