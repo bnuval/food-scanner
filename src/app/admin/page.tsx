@@ -22,6 +22,7 @@ interface StatsData {
 export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [stats, setStats] = useState<StatsData | null>(null);
@@ -42,22 +43,24 @@ export default function AdminPage() {
 
       setStats(data);
       setIsAuthenticated(true);
-      sessionStorage.setItem("purebite_admin_token", pwd);
+      localStorage.setItem("purebite_admin_token", pwd);
     } catch (err: any) {
       setError(err.message || "Authentication failed");
-      sessionStorage.removeItem("purebite_admin_token");
+      localStorage.removeItem("purebite_admin_token");
       setIsAuthenticated(false);
     } finally {
       setLoading(false);
+      setCheckingSession(false);
     }
   };
 
-  // Restore authenticated session automatically on page refresh
   useEffect(() => {
-    const savedToken = sessionStorage.getItem("purebite_admin_token");
+    const savedToken = localStorage.getItem("purebite_admin_token");
     if (savedToken) {
       setPassword(savedToken);
       fetchStats(savedToken);
+    } else {
+      setCheckingSession(false);
     }
   }, []);
 
@@ -67,7 +70,7 @@ export default function AdminPage() {
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem("purebite_admin_token");
+    localStorage.removeItem("purebite_admin_token");
     setIsAuthenticated(false);
     setPassword("");
     setStats(null);
@@ -106,7 +109,12 @@ export default function AdminPage() {
           </div>
         </header>
 
-        {!isAuthenticated ? (
+        {checkingSession ? (
+          <div className="flex flex-col items-center justify-center py-24 gap-3">
+            <div className="w-6 h-6 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-xs text-slate-400 font-mono">Restoring session...</p>
+          </div>
+        ) : !isAuthenticated ? (
           <section className="bg-slate-900/90 max-w-md mx-auto w-full rounded-3xl p-6 border border-slate-800 shadow-2xl backdrop-blur-md mt-6">
             <div className="w-12 h-12 rounded-2xl bg-emerald-950/60 border border-emerald-800/40 flex items-center justify-center mb-3">
               <svg className="w-5 h-5 text-emerald-400 fill-current" viewBox="0 0 24 24">
