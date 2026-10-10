@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 interface VisitorEntry {
@@ -42,19 +42,37 @@ export default function AdminPage() {
 
       setStats(data);
       setIsAuthenticated(true);
+      sessionStorage.setItem("purebite_admin_token", pwd);
     } catch (err: any) {
       setError(err.message || "Authentication failed");
+      sessionStorage.removeItem("purebite_admin_token");
+      setIsAuthenticated(false);
     } finally {
       setLoading(false);
     }
   };
+
+  // Restore authenticated session automatically on page refresh
+  useEffect(() => {
+    const savedToken = sessionStorage.getItem("purebite_admin_token");
+    if (savedToken) {
+      setPassword(savedToken);
+      fetchStats(savedToken);
+    }
+  }, []);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     fetchStats(password);
   };
 
-  // Sort daily visits latest first
+  const handleLogout = () => {
+    sessionStorage.removeItem("purebite_admin_token");
+    setIsAuthenticated(false);
+    setPassword("");
+    setStats(null);
+  };
+
   const sortedDays = Object.entries(stats?.dailyVisits || {}).sort(
     ([dayA], [dayB]) => new Date(dayB).getTime() - new Date(dayA).getTime()
   );
@@ -62,7 +80,6 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex justify-center py-6 px-3 sm:px-6">
       <main className="w-full max-w-4xl flex flex-col gap-5">
-        {/* Header */}
         <header className="flex items-center justify-between pb-3 border-b border-slate-800">
           <div className="flex items-center gap-2.5">
             <span className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -71,16 +88,25 @@ export default function AdminPage() {
               <p className="text-[11px] text-slate-400">Live Traffic & Market Intelligence</p>
             </div>
           </div>
-          <Link
-            href="/"
-            className="text-xs font-semibold text-slate-300 hover:text-white bg-slate-900 border border-slate-800 px-3.5 py-1.5 rounded-xl transition-all"
-          >
-            ← View App
-          </Link>
+          <div className="flex items-center gap-2">
+            {isAuthenticated && (
+              <button
+                onClick={handleLogout}
+                className="text-xs font-semibold text-rose-400 hover:text-rose-300 bg-rose-950/40 border border-rose-800/40 px-3 py-1.5 rounded-xl transition-all"
+              >
+                Logout
+              </button>
+            )}
+            <Link
+              href="/"
+              className="text-xs font-semibold text-slate-300 hover:text-white bg-slate-900 border border-slate-800 px-3.5 py-1.5 rounded-xl transition-all"
+            >
+              ← View App
+            </Link>
+          </div>
         </header>
 
         {!isAuthenticated ? (
-          /* Password Screen */
           <section className="bg-slate-900/90 max-w-md mx-auto w-full rounded-3xl p-6 border border-slate-800 shadow-2xl backdrop-blur-md mt-6">
             <div className="w-12 h-12 rounded-2xl bg-emerald-950/60 border border-emerald-800/40 flex items-center justify-center mb-3">
               <svg className="w-5 h-5 text-emerald-400 fill-current" viewBox="0 0 24 24">
@@ -111,7 +137,6 @@ export default function AdminPage() {
             </form>
           </section>
         ) : (
-          /* Live Stats & Table */
           <section className="space-y-5">
             {stats?.notice && (
               <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-2xl text-xs text-amber-300">
@@ -119,7 +144,6 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* DYNAMIC TOP HIT CARDS */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="bg-slate-900/90 rounded-2xl p-5 border border-slate-800 shadow-xl flex flex-col justify-between">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
@@ -156,7 +180,6 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* TABULAR VISITOR AUDIT LOG */}
             <div className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800 shadow-xl">
               <div className="flex items-center justify-between mb-4">
                 <div>
@@ -232,7 +255,6 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* DAY-WISE ACCUMULATION SUMMARY */}
             <div className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800 shadow-xl">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-3">
                 Daily Hit Summary
