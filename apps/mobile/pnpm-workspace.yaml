@@ -1,0 +1,19 @@
+# Single-project pnpm settings (supply-chain hardening).
+nodeLinker: hoisted
+# Only install package versions that have been public for at least 7 days.
+minimumReleaseAge: 10080
+trustPolicy: no-downgrade
+blockExoticSubdeps: true
+strictDepBuilds: true
+onlyBuiltDependencies: []
+# Ship prebuilt binaries via optionalDependencies; their install scripts are not needed.
+ignoredBuiltDependencies:
+  - "@parcel/watcher"
+  - unrs-resolver
+# Legacy releases published before npm provenance existed (false-positive "downgrades").
+trustPolicyExclude:
+  - semver@6.3.1
+  - eslint-import-resolver-typescript@3.10.1
+# react-dom is only an (unused) web peer of expo-router; keep it aligned with react.
+overrides:
+  react-dom: 19.3.0
