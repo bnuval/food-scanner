@@ -1,66 +1,82 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 25; // Expands execution window on supported runtimes
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function POST(req: NextRequest) {
   try {
     const { image, query } = await req.json();
 
+    const apiKey = (process.env.GEMINI_API_KEY || process.env["GEMINI_API_KEY"])?.trim();
+    if (!apiKey) {
+      return NextResponse.json({ error: "Missing GEMINI_API_KEY in environment variables." }, { status: 500 });
+    }
+
     if (!image && !query) {
       return NextResponse.json({ error: "Missing image or product query" }, { status: 400 });
     }
 
-    // Flash provides fast sub-2s responses ideal for mobile networks
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 850,
-      },
-    });
-
-    let prompt = `Analyze this product packaging/ingredients list concisely for health and cosmetic safety.
+    const systemPrompt = `Analyze this food or cosmetic product packaging/ingredients list concisely for health and cosmetic safety.
 Return a strict JSON object with:
 - productName (string)
 - category ("Food" | "Cosmetic" | "Other")
-- score (number from 0 to 100)
+- score (number from 0 to 100, where 100 is completely safe/wholesome and 0 is hazardous)
 - verdict ("Safe" | "Caution" | "Hazardous")
 - harmfulIngredients (array of strings)
 - positives (array of strings)
 - summary (2 sentences max)
-Return RAW JSON only, no markdown backticks.`;
+Return RAW JSON only. Do not wrap in markdown fences.`;
 
-    let result;
+    const parts: any[] = [{ text: systemPrompt }];
 
     if (image) {
-      // Clean base64 prefix
-      const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
-
-      const imagePart = {
-        inlineData: {
+      // Strip base64 header if present
+      const base64Data = image.replace(/^data:image\/[a-zA-Z]+;base64,/, "");
+      parts.push({
+        inline_data: {
+          mime_type: "image/jpeg",
           data: base64Data,
-          mimeType: "image/jpeg",
         },
-      };
-
-      result = await model.generateContent([prompt, imagePart]);
-    } else {
-      result = await model.generateContent(`${prompt}\nProduct query: ${query}`);
+      });
     }
 
-    const text = result.response.text().trim();
-    const cleanJson = text.replace(/^```json\s*|\s*```$/g, "");
-    const parsed = JSON.parse(cleanJson);
+    if (query) {
+      parts.push({ text: `Product query or ingredients: ${query}` });
+    }
 
-    return NextResponse.json(parsed);
+    const payload = {
+      contents: [{ parts }],
+      generationConfig: {
+        temperature: 0.1,
+        maxOutputTokens: 850,
+      },
+    };
+
+    // Use Gemini 1.5 Flash via native REST API (No npm SDK required)
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+    const res = await fetch(geminiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("Gemini API error:", errText);
+      return NextResponse.json({ error: "Gemini API rejected request" }, { status: res.status });
+    }
+
+    const result = await res.json();
+    const rawOutput = result?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "{}";
+    const cleanJson = rawOutput.replace(/^```json\s*|\s*```$/g, "");
+    const parsedData = JSON.parse(cleanJson);
+
+    return NextResponse.json(parsedData);
   } catch (error: any) {
-    console.error("Scanner execution error:", error);
+    console.error("Analyze error:", error);
     return NextResponse.json(
-      { error: "Scan analysis timed out or could not read label. Please try holding the camera closer." },
+      { error: "Scan analysis timed out or could not read label. Please hold steady and retry." },
       { status: 500 }
     );
   }
