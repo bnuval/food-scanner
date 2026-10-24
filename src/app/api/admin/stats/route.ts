@@ -1,18 +1,44 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+﻿import { createHash, timingSafeEqual } from "crypto";
+import { NextRequest, NextResponse } from "next/server";
+import { errorResponse, readJsonBody } from "../../_lib/http";
+import { adminLoginRetryAfter, recordAdminLoginFailure } from "../../_lib/rate-limit";
+import { scrubVisitor } from "../../_lib/visitors";
 
+export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+const MAX_BODY_BYTES = 1024;
+
+// Hashing both sides first gives equal-length buffers, so neither the comparison time nor an
+// early length check reveals anything about the expected password.
+function passwordMatches(candidate: string, expected: string): boolean {
+  const a = createHash("sha256").update(candidate).digest();
+  const b = createHash("sha256").update(expected).digest();
+  return timingSafeEqual(a, b);
+}
 
 export async function POST(req: NextRequest) {
   try {
-    const { password } = await req.json();
-    const expectedPassword = process.env.ADMIN_PASSWORD || "PureBiteAdmin2026";
-
-    if (!password || password !== expectedPassword) {
-      return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
+    const expectedPassword = process.env.ADMIN_PASSWORD;
+    if (!expectedPassword?.trim()) {
+      console.error("[admin] ADMIN_PASSWORD is not set; admin access is disabled");
+      return errorResponse(503, "SERVICE_UNAVAILABLE");
     }
 
-    const apiKey = (process.env.JSONBIN_API_KEY || process.env["JSONBIN_API_KEY"])?.trim();
-    const binId = (process.env.JSONBIN_BIN_ID || process.env["JSONBIN_BIN_ID"])?.trim();
+    const retryAfter = await adminLoginRetryAfter(req);
+    if (retryAfter === null) return errorResponse(503, "SERVICE_UNAVAILABLE");
+    if (retryAfter > 0) return errorResponse(429, "RATE_LIMITED", { "Retry-After": String(retryAfter) });
+
+    const body = await readJsonBody(req, MAX_BODY_BYTES);
+    const password = "data" in body ? (body.data as { password?: unknown } | null)?.password : undefined;
+
+    if (typeof password !== "string" || !password || !passwordMatches(password, expectedPassword)) {
+      await recordAdminLoginFailure(req);
+      return errorResponse(401, "UNAUTHORIZED");
+    }
+
+    const apiKey = process.env.JSONBIN_API_KEY?.trim();
+    const binId = process.env.JSONBIN_BIN_ID?.trim();
 
     if (!apiKey || !binId) {
       return NextResponse.json({
@@ -25,7 +51,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const res = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+    const res = await fetch(`https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}/latest`, {
       headers: {
         "X-Master-Key": apiKey,
       },
@@ -44,13 +70,11 @@ export async function POST(req: NextRequest) {
       countryCounts: data.countryCounts || {},
       pageCounts: data.pageCounts || {},
       dailyVisits: data.dailyVisits || {},
-      recentVisitors: data.recentVisitors || [],
+      // Entries written before IPs stopped being stored may still hold one; never serve it.
+      recentVisitors: Array.isArray(data.recentVisitors) ? data.recentVisitors.map(scrubVisitor) : [],
     });
-  } catch (err: any) {
-    console.error("Stats fetch error:", err);
-    return NextResponse.json(
-      { error: `Failed to load stats: ${err?.message || "Unknown error"}` },
-      { status: 500 }
-    );
+  } catch (err) {
+    console.error("[admin] stats fetch error:", err);
+    return errorResponse(500, "STATS_FAILED");
   }
 }

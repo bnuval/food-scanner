@@ -290,7 +290,7 @@ export default function SearchPage() {
             ) : (
               <div className="text-center py-6 bg-slate-900/60 rounded-3xl border border-slate-800">
                 <p className="text-xs text-slate-400">
-                  No verified healthy options found for this specific query. Try a general term like "Peanut Butter" or "Ketchup".
+                  No verified healthy options found for this specific query. Try a general term like &quot;Peanut Butter&quot; or &quot;Ketchup&quot;.
                 </p>
               </div>
             )}

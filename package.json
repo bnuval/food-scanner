@@ -9,11 +9,12 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@google/genai": "latest",
+    "@upstash/ratelimit": "2.2.0",
     "@upstash/redis": "^1.39.0",
     "next": "^14.2.0",
     "react": "^18",
-    "react-dom": "^18"
+    "react-dom": "^18",
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@netlify/plugin-nextjs": "^5.16.0",
@@ -21,6 +22,8 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.6.1",
+    "eslint": "8.57.1",
+    "eslint-config-next": "14.2.35",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"
