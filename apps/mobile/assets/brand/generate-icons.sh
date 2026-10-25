@@ -13,4 +13,7 @@ rsvg-convert -w 1024 -h 1024 "$MONO" -o "$OUT/android-icon-monochrome.png"
 magick "$OUT/android-icon-background.png" "$OUT/android-icon-foreground.png" -composite "$OUT/icon.png"
 # Splash: glyph cropped to the artwork, shown on the brand colour.
 rsvg-convert -w 1024 -h 1024 glyph.svg | magick - -crop 470x470+277+277 +repage "$OUT/splash-icon.png"
+# Google Play store graphics: 512x512 icon and a 1024x500 feature graphic (no alpha channel).
+magick "$OUT/icon.png" -resize 512x512 ../../store/icon-512.png
+rsvg-convert -w 1024 -h 500 feature-graphic.svg | magick - -background "#05603F" -alpha remove -alpha off ../../store/feature-graphic.png
 echo "icons regenerated"
