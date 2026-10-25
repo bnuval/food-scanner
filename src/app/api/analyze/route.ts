@@ -6,7 +6,6 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
 
-    // Find any key that matches image-related names (case-insensitive)
     const allKeys = Object.keys(body);
     let rawImageData: any = null;
 
@@ -25,12 +24,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Handle array of images (e.g., imagesbase64: ["..."])
     if (Array.isArray(rawImageData)) {
       rawImageData = rawImageData.find((img) => typeof img === "string" && img.trim().length > 0) || null;
     }
 
-    // Handle search text query fallback
     let rawQuery =
       body.query ||
       body.productQuery ||
@@ -39,16 +36,12 @@ export async function POST(req: NextRequest) {
       body.search ||
       null;
 
-    // Check if the image value is actually populated
     const hasValidImage = typeof rawImageData === "string" && rawImageData.trim().length > 50;
     const hasValidQuery = typeof rawQuery === "string" && rawQuery.trim().length > 0;
 
     if (!hasValidImage && !hasValidQuery) {
-      console.warn("Payload validation failed. Keys:", allKeys);
       return NextResponse.json(
-        {
-          error: `Image data was empty or invalid. Found keys: [${allKeys.join(", ")}], image type: ${typeof rawImageData}, length: ${typeof rawImageData === "string" ? rawImageData.length : 0}`
-        },
+        { error: "Image data was empty or invalid." },
         { status: 400 }
       );
     }
@@ -56,7 +49,7 @@ export async function POST(req: NextRequest) {
     const apiKey = (process.env.GEMINI_API_KEY || process.env["GEMINI_API_KEY"])?.trim();
     if (!apiKey) {
       return NextResponse.json(
-        { error: "GEMINI_API_KEY is not configured in Netlify environment variables." },
+        { error: "GEMINI_API_KEY is missing from Netlify environment variables." },
         { status: 500 }
       );
     }
@@ -100,49 +93,42 @@ Do NOT include markdown formatting, backticks, or prose. Return only pure JSON.`
     };
 
     const candidateModels = [
-      "gemini-2.0-flash",
-      "gemini-1.5-flash-latest",
       "gemini-1.5-flash",
+      "gemini-1.5-flash-8b",
+      "gemini-1.5-pro",
+      "gemini-2.0-flash",
     ];
 
     let apiData = null;
-    let lastStatus = 503;
+    let errors: string[] = [];
 
     for (const model of candidateModels) {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          const res = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-            cache: "no-store",
-          });
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          cache: "no-store",
+        });
 
-          if (res.ok) {
-            apiData = await res.json();
-            break;
-          }
-
-          lastStatus = res.status;
-          if (res.status === 503 || res.status === 429) {
-            await new Promise((r) => setTimeout(r, 600));
-          } else {
-            break;
-          }
-        } catch (fetchErr) {
-          console.warn(`Error on ${model}:`, fetchErr);
+        if (res.ok) {
+          apiData = await res.json();
+          break;
         }
-      }
 
-      if (apiData) break;
+        const errText = await res.text();
+        errors.push(`[${model} HTTP ${res.status}]: ${errText}`);
+      } catch (err: any) {
+        errors.push(`[${model} Network]: ${err?.message || err}`);
+      }
     }
 
     if (!apiData) {
       return NextResponse.json(
-        { error: "AI service is temporarily busy. Please hold steady and retry." },
-        { status: lastStatus }
+        { error: "AI processing failed.", details: errors },
+        { status: 502 }
       );
     }
 
@@ -162,9 +148,8 @@ Do NOT include markdown formatting, backticks, or prose. Return only pure JSON.`
       throw new Error("Unable to parse model output as JSON");
     }
   } catch (error: any) {
-    console.error("Scanner execution error:", error);
     return NextResponse.json(
-      { error: "Unable to complete scan. Please hold steady and try again." },
+      { error: "Scanner error: " + (error?.message || error) },
       { status: 500 }
     );
   }
