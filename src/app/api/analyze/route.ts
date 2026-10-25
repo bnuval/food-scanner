@@ -6,33 +6,49 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
 
-    // Detect image regardless of casing, pluralization, or naming convention
-    let rawImage =
-      body.imagesbase64 ||
-      body.imageBase64 ||
-      body.image ||
-      body.images ||
-      body.imageData ||
-      body.photo ||
-      body.dataUrl ||
-      null;
+    // Find any key that matches image-related names (case-insensitive)
+    const allKeys = Object.keys(body);
+    let rawImageData: any = null;
 
-    // If an array of images is passed, pick the first image string
-    if (Array.isArray(rawImage) && rawImage.length > 0) {
-      rawImage = rawImage[0];
+    for (const key of allKeys) {
+      const lower = key.toLowerCase();
+      if (
+        lower.includes("image") ||
+        lower.includes("photo") ||
+        lower.includes("dataurl") ||
+        lower.includes("file")
+      ) {
+        if (body[key]) {
+          rawImageData = body[key];
+          break;
+        }
+      }
     }
 
-    const rawQuery =
+    // Handle array of images (e.g., imagesbase64: ["..."])
+    if (Array.isArray(rawImageData)) {
+      rawImageData = rawImageData.find((img) => typeof img === "string" && img.trim().length > 0) || null;
+    }
+
+    // Handle search text query fallback
+    let rawQuery =
       body.query ||
       body.productQuery ||
       body.text ||
       body.ingredients ||
+      body.search ||
       null;
 
-    if (!rawImage && !rawQuery) {
-      console.warn("Received empty request body keys:", Object.keys(body));
+    // Check if the image value is actually populated
+    const hasValidImage = typeof rawImageData === "string" && rawImageData.trim().length > 50;
+    const hasValidQuery = typeof rawQuery === "string" && rawQuery.trim().length > 0;
+
+    if (!hasValidImage && !hasValidQuery) {
+      console.warn("Payload validation failed. Keys:", allKeys);
       return NextResponse.json(
-        { error: "No image or product text received. Received keys: " + Object.keys(body).join(", ") },
+        {
+          error: `Image data was empty or invalid. Found keys: [${allKeys.join(", ")}], image type: ${typeof rawImageData}, length: ${typeof rawImageData === "string" ? rawImageData.length : 0}`
+        },
         { status: 400 }
       );
     }
@@ -45,7 +61,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const promptText = `You are a nutrition and ingredient safety specialist. Analyze this product packaging, label, or ingredients list.
+    const promptText = `Analyze this product packaging, label, or ingredients list.
 Return ONLY a valid, raw JSON object with this exact structure:
 {
   "productName": "Name of product or 'Unknown Product'",
@@ -61,8 +77,8 @@ Do NOT include markdown formatting, backticks, or prose. Return only pure JSON.`
 
     const parts: any[] = [{ text: promptText }];
 
-    if (rawImage && typeof rawImage === "string") {
-      const base64Data = rawImage.replace(/^data:image\/[a-zA-Z]+;base64,/, "");
+    if (hasValidImage) {
+      const base64Data = rawImageData.replace(/^data:image\/[a-zA-Z]+;base64,/, "").trim();
       parts.push({
         inline_data: {
           mime_type: "image/jpeg",
@@ -71,7 +87,7 @@ Do NOT include markdown formatting, backticks, or prose. Return only pure JSON.`
       });
     }
 
-    if (rawQuery) {
+    if (hasValidQuery) {
       parts.push({ text: `Product query or ingredients: ${rawQuery}` });
     }
 
