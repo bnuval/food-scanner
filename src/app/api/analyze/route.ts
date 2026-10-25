@@ -6,14 +6,21 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
 
-    // Accept any common field name for the image or search query
-    const rawImage =
-      body.image ||
+    // Detect image regardless of casing, pluralization, or naming convention
+    let rawImage =
+      body.imagesbase64 ||
       body.imageBase64 ||
+      body.image ||
+      body.images ||
       body.imageData ||
       body.photo ||
       body.dataUrl ||
       null;
+
+    // If an array of images is passed, pick the first image string
+    if (Array.isArray(rawImage) && rawImage.length > 0) {
+      rawImage = rawImage[0];
+    }
 
     const rawQuery =
       body.query ||
@@ -38,23 +45,23 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const promptText = `Analyze this product packaging, label, or ingredients.
-Return a RAW JSON object with this exact shape:
+    const promptText = `You are a nutrition and ingredient safety specialist. Analyze this product packaging, label, or ingredients list.
+Return ONLY a valid, raw JSON object with this exact structure:
 {
-  "productName": "Product Name",
+  "productName": "Name of product or 'Unknown Product'",
   "category": "Food",
-  "score": 80,
+  "score": 85,
   "verdict": "Safe",
   "harmfulIngredients": [],
   "positives": [],
   "summary": "Brief 1-2 sentence assessment."
 }
-Return ONLY pure JSON. No markdown backticks.`;
+Verdict must be one of: "Safe", "Caution", "Hazardous".
+Do NOT include markdown formatting, backticks, or prose. Return only pure JSON.`;
 
     const parts: any[] = [{ text: promptText }];
 
-    if (rawImage) {
-      // Clean data URL prefix if present
+    if (rawImage && typeof rawImage === "string") {
       const base64Data = rawImage.replace(/^data:image\/[a-zA-Z]+;base64,/, "");
       parts.push({
         inline_data: {
@@ -136,7 +143,7 @@ Return ONLY pure JSON. No markdown backticks.`;
     } catch {
       const match = cleanJson.match(/\{[\s\S]*\}/);
       if (match) return NextResponse.json(JSON.parse(match[0]));
-      throw new Error("Unable to parse model JSON output");
+      throw new Error("Unable to parse model output as JSON");
     }
   } catch (error: any) {
     console.error("Scanner execution error:", error);
