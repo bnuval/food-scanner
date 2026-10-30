@@ -6,21 +6,43 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
 
-    const rawImage =
-      body.imagesbase64?.[0] ||
-      body.image ||
-      body.imageBase64 ||
-      body.photo ||
-      null;
+    // Detect image from any key (imagesbase64, imagesBase64, image, dataUrl, photo, file, etc.)
+    let rawImageData: any = null;
+    const allKeys = Object.keys(body);
+
+    for (const key of allKeys) {
+      const lower = key.toLowerCase();
+      if (
+        lower.includes("image") ||
+        lower.includes("photo") ||
+        lower.includes("dataurl") ||
+        lower.includes("file")
+      ) {
+        if (body[key]) {
+          rawImageData = body[key];
+          break;
+        }
+      }
+    }
+
+    // If it's an array of strings, take the first valid non-empty string
+    if (Array.isArray(rawImageData)) {
+      rawImageData = rawImageData.find((img) => typeof img === "string" && img.trim().length > 0) || null;
+    }
 
     const rawQuery =
       body.query ||
       body.productQuery ||
       body.text ||
       body.ingredients ||
+      body.search ||
       null;
 
-    if (!rawImage && !rawQuery) {
+    const hasValidImage = typeof rawImageData === "string" && rawImageData.trim().length > 30;
+    const hasValidQuery = typeof rawQuery === "string" && rawQuery.trim().length > 0;
+
+    if (!hasValidImage && !hasValidQuery) {
+      console.warn("Payload missing image and query. Received keys:", Object.keys(body));
       return NextResponse.json(
         { error: "Please provide a product image or ingredient text to analyze." },
         { status: 400 }
@@ -30,7 +52,7 @@ export async function POST(req: NextRequest) {
     const apiKey = process.env.GEMINI_API_KEY?.trim();
     if (!apiKey) {
       return NextResponse.json(
-        { error: "GEMINI_API_KEY is not configured." },
+        { error: "GEMINI_API_KEY is not configured on Netlify." },
         { status: 500 }
       );
     }
@@ -51,8 +73,8 @@ Do NOT include markdown formatting, backticks, or prose. Return only pure JSON.`
 
     const parts: any[] = [{ text: promptText }];
 
-    if (rawImage && typeof rawImage === "string" && rawImage.length > 50) {
-      const base64Data = rawImage.replace(/^data:image\/[a-zA-Z]+;base64,/, "").trim();
+    if (hasValidImage) {
+      const base64Data = rawImageData.replace(/^data:image\/[a-zA-Z]+;base64,/, "").trim();
       parts.push({
         inline_data: {
           mime_type: "image/jpeg",
@@ -61,7 +83,7 @@ Do NOT include markdown formatting, backticks, or prose. Return only pure JSON.`
       });
     }
 
-    if (rawQuery) {
+    if (hasValidQuery) {
       parts.push({ text: `Product query or ingredients: ${rawQuery}` });
     }
 
@@ -73,7 +95,7 @@ Do NOT include markdown formatting, backticks, or prose. Return only pure JSON.`
       },
     };
 
-    const url = `[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$){apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     const res = await fetch(url, {
       method: "POST",
