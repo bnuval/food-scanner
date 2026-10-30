@@ -13,7 +13,8 @@ This repository contains two apps that share one backend:
 
 > **Before publishing anything, work through [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md).**
 > The public API has no request rate limits. Configure Gemini API quotas and billing alerts
-> before exposing it publicly; analyze and search requests can incur API costs.
+> before exposing it publicly. Analyze and search try both Gemini models in parallel, which can
+> incur charges for both requests.
 
 ## Features
 
@@ -39,7 +40,8 @@ and dark themes, full English/Hindi UI, TalkBack support. See the
 ## API
 
 All routes are `POST` with JSON bodies. Analyze and search requests are validated with zod, but
-the public API has no rate limits; each successful request can incur Gemini API cost.
+the public API has no rate limits; each successful request can incur Gemini API cost, and
+parallel model failover can charge for both model attempts.
 Admin password attempts are also unlimited, so use a strong, unique `ADMIN_PASSWORD`.
 
 | Route | Body |
@@ -75,7 +77,7 @@ Netlify → Site configuration → Environment variables). None of them belong i
 | `ADMIN_PASSWORD` | yes, for `/admin` | Admin dashboard password. No default: the dashboard is disabled when unset. |
 | `IP_HASH_SECRET` | recommended | Secret for the anonymous daily visitor hash (`openssl rand -hex 32`). Without it every visitor is stored as `anon`. |
 | `JSONBIN_API_KEY` + `JSONBIN_BIN_ID` | for analytics | Storage for page-view counters. |
-| `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | no | Override the pinned fast models (`gemini-3.5-flash-lite`, fallback `gemini-3.1-flash-lite`). |
+| `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | no | Override the parallel fast-model attempts (`gemini-3.5-flash-lite` and `gemini-3.1-flash-lite`). |
 
 ## Deploy the web app
 

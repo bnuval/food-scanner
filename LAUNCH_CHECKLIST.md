@@ -5,9 +5,10 @@ published. Tick items off in a PR or copy the list into an issue.
 
 ## 1. Backend
 
-The public API has no request rate limits, including failed admin login attempts. Each analyze or
-search request can incur Gemini API cost. Configure strict Gemini quotas and billing alerts, and
-use a strong unique `ADMIN_PASSWORD`, before sharing the production URL.
+The public API has no request rate limits, including failed admin login attempts. Analyze and
+search try both Gemini models in parallel, so one user request can incur charges for both model
+attempts. Configure strict Gemini quotas and billing alerts, and use a strong unique
+`ADMIN_PASSWORD`, before sharing the production URL.
 
 - [ ] **Set a new `ADMIN_PASSWORD`.** The old fallback password `PureBiteAdmin2026` is visible in
       public git history; treat it as leaked. The admin dashboard stays disabled until this is set.
