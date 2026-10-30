@@ -19,7 +19,7 @@ use a strong unique `ADMIN_PASSWORD`, before sharing the production URL.
         EEA, UK or Switzerland).
   - [ ] Restrict the key to the Generative Language API in Google Cloud.
   - [ ] Add a **budget alert** and a per-day quota in Google Cloud.
-  - [ ] Confirm the pinned models (`gemini-3.8-flash`, fallback `gemini-3.6-flash`) are enabled
+  - [ ] Confirm the pinned models (`gemini-3.5-flash-lite`, fallback `gemini-3.1-flash-lite`) are enabled
         for your key; otherwise set `GEMINI_MODEL` / `GEMINI_FALLBACK_MODEL`.
 - [ ] **Redeploy**, then make sure the production URL is public: Vercel *Deployment Protection*
       must not apply to the production domain (the current `*.vercel.app` deployments ask for a

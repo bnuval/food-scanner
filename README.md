@@ -75,7 +75,7 @@ Netlify → Site configuration → Environment variables). None of them belong i
 | `ADMIN_PASSWORD` | yes, for `/admin` | Admin dashboard password. No default: the dashboard is disabled when unset. |
 | `IP_HASH_SECRET` | recommended | Secret for the anonymous daily visitor hash (`openssl rand -hex 32`). Without it every visitor is stored as `anon`. |
 | `JSONBIN_API_KEY` + `JSONBIN_BIN_ID` | for analytics | Storage for page-view counters. |
-| `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | no | Override the pinned models (`gemini-3.8-flash`, fallback `gemini-3.6-flash`). |
+| `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | no | Override the pinned fast models (`gemini-3.5-flash-lite`, fallback `gemini-3.1-flash-lite`). |
 
 ## Deploy the web app
 

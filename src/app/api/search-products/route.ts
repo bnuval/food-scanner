@@ -7,8 +7,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-// The mobile app gives up on a search after 30s, so both attempts finish well before that.
-const ATTEMPT_TIMEOUTS_MS: [number, number] = [17_000, 10_000];
+// Keep both attempts within the synchronous function window on Netlify.
+const ATTEMPT_TIMEOUTS_MS: [number, number] = [12_000, 8_000];
 const MAX_BODY_BYTES = 8 * 1024;
 
 // Helper: Strip duplicate brand prefixes and special characters

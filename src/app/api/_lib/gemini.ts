@@ -2,9 +2,9 @@
 
 const API_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 
-// Override with GEMINI_MODEL / GEMINI_FALLBACK_MODEL without a code change.
-const PRIMARY_MODEL = "gemini-3.8-flash";
-const FALLBACK_MODEL = "gemini-3.6-flash";
+// Flash-Lite keeps synchronous hosting runtimes within their request deadline.
+const PRIMARY_MODEL = "gemini-3.5-flash-lite";
+const FALLBACK_MODEL = "gemini-3.1-flash-lite";
 
 // Bounds the cost of a single call; leaves room for the model's thinking tokens plus the JSON.
 const MAX_OUTPUT_TOKENS = 8192;

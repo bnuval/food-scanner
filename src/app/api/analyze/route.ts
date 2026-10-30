@@ -8,8 +8,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const ATTEMPT_TIMEOUTS_MS: [number, number] = [25_000, 15_000];
-const MAX_ANALYSIS_OUTPUT_TOKENS = 4096;
+const ATTEMPT_TIMEOUTS_MS: [number, number] = [12_000, 8_000];
+const MAX_ANALYSIS_OUTPUT_TOKENS = 3072;
 
 const ModelAnalysisSchema = z.object({
   isReadable: z.boolean(),
