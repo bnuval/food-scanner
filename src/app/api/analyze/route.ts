@@ -6,50 +6,31 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
 
-    const allKeys = Object.keys(body);
-    let rawImageData: any = null;
+    const rawImage =
+      body.imagesbase64?.[0] ||
+      body.image ||
+      body.imageBase64 ||
+      body.photo ||
+      null;
 
-    for (const key of allKeys) {
-      const lower = key.toLowerCase();
-      if (
-        lower.includes("image") ||
-        lower.includes("photo") ||
-        lower.includes("dataurl") ||
-        lower.includes("file")
-      ) {
-        if (body[key]) {
-          rawImageData = body[key];
-          break;
-        }
-      }
-    }
-
-    if (Array.isArray(rawImageData)) {
-      rawImageData = rawImageData.find((img) => typeof img === "string" && img.trim().length > 0) || null;
-    }
-
-    let rawQuery =
+    const rawQuery =
       body.query ||
       body.productQuery ||
       body.text ||
       body.ingredients ||
-      body.search ||
       null;
 
-    const hasValidImage = typeof rawImageData === "string" && rawImageData.trim().length > 50;
-    const hasValidQuery = typeof rawQuery === "string" && rawQuery.trim().length > 0;
-
-    if (!hasValidImage && !hasValidQuery) {
+    if (!rawImage && !rawQuery) {
       return NextResponse.json(
-        { error: "Image data was empty or invalid." },
+        { error: "Please provide a product image or ingredient text to analyze." },
         { status: 400 }
       );
     }
 
-    const apiKey = (process.env.GEMINI_API_KEY || process.env["GEMINI_API_KEY"])?.trim();
+    const apiKey = process.env.GEMINI_API_KEY?.trim();
     if (!apiKey) {
       return NextResponse.json(
-        { error: "GEMINI_API_KEY is missing from Netlify environment variables." },
+        { error: "GEMINI_API_KEY is not configured." },
         { status: 500 }
       );
     }
@@ -70,8 +51,8 @@ Do NOT include markdown formatting, backticks, or prose. Return only pure JSON.`
 
     const parts: any[] = [{ text: promptText }];
 
-    if (hasValidImage) {
-      const base64Data = rawImageData.replace(/^data:image\/[a-zA-Z]+;base64,/, "").trim();
+    if (rawImage && typeof rawImage === "string" && rawImage.length > 50) {
+      const base64Data = rawImage.replace(/^data:image\/[a-zA-Z]+;base64,/, "").trim();
       parts.push({
         inline_data: {
           mime_type: "image/jpeg",
@@ -80,7 +61,7 @@ Do NOT include markdown formatting, backticks, or prose. Return only pure JSON.`
       });
     }
 
-    if (hasValidQuery) {
+    if (rawQuery) {
       parts.push({ text: `Product query or ingredients: ${rawQuery}` });
     }
 
@@ -92,47 +73,27 @@ Do NOT include markdown formatting, backticks, or prose. Return only pure JSON.`
       },
     };
 
-    const candidateModels = [
-      "gemini-1.5-flash",
-      "gemini-1.5-flash-8b",
-      "gemini-1.5-pro",
-      "gemini-2.0-flash",
-    ];
+    const url = `[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$){apiKey}`;
 
-    let apiData = null;
-    let errors: string[] = [];
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      cache: "no-store",
+    });
 
-    for (const model of candidateModels) {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-      try {
-        const res = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          cache: "no-store",
-        });
-
-        if (res.ok) {
-          apiData = await res.json();
-          break;
-        }
-
-        const errText = await res.text();
-        errors.push(`[${model} HTTP ${res.status}]: ${errText}`);
-      } catch (err: any) {
-        errors.push(`[${model} Network]: ${err?.message || err}`);
-      }
-    }
-
-    if (!apiData) {
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("Gemini API Error:", res.status, errText);
       return NextResponse.json(
-        { error: "AI processing failed.", details: errors },
-        { status: 502 }
+        { error: "AI service is temporarily busy. Please hold steady and retry." },
+        { status: res.status }
       );
     }
 
+    const apiData = await res.json();
     const rawText = apiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+
     const cleanJson = rawText
       .replace(/^```json\s*/i, "")
       .replace(/^```\s*/i, "")
@@ -148,8 +109,9 @@ Do NOT include markdown formatting, backticks, or prose. Return only pure JSON.`
       throw new Error("Unable to parse model output as JSON");
     }
   } catch (error: any) {
+    console.error("Analyze error:", error);
     return NextResponse.json(
-      { error: "Scanner error: " + (error?.message || error) },
+      { error: "Unable to complete scan. Please try again." },
       { status: 500 }
     );
   }
