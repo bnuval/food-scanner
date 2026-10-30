@@ -20,6 +20,7 @@ type GenerateJsonOptions = {
   systemInstruction: string;
   parts: GeminiPart[];
   responseSchema: object;
+  maxOutputTokens?: number;
   /** Timeout for the primary attempt and for the fallback attempt. */
   timeoutsMs: [number, number];
 };
@@ -41,7 +42,7 @@ export async function generateJson(opts: GenerateJsonOptions): Promise<unknown> 
     contents: [{ role: "user", parts: opts.parts }],
     generationConfig: {
       temperature: 0,
-      maxOutputTokens: MAX_OUTPUT_TOKENS,
+      maxOutputTokens: opts.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
       responseMimeType: "application/json",
       responseSchema: opts.responseSchema,
     },

@@ -6,6 +6,8 @@ import Link from "next/link";
 export default function Home() {
   const [images, setImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [scanError, setScanError] = useState("");
   const [result, setResult] = useState<any>(null);
   const [userCountry, setUserCountry] = useState<string>("India");
   const [userTimezone, setUserTimezone] = useState<string>("");
@@ -35,38 +37,55 @@ export default function Home() {
     }
   }, []);
 
-  const compressImage = (file: File): Promise<string> => {
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement("canvas");
-          const MAX_WIDTH = 1000;
-          const scale = Math.min(1, MAX_WIDTH / img.width);
-          canvas.width = img.width * scale;
-          canvas.height = img.height * scale;
+  const compressImage = async (file: File): Promise<string> => {
+    const sourceUrl = URL.createObjectURL(file);
+    try {
+      const image = new Image();
+      image.src = sourceUrl;
+      await image.decode();
 
-          const ctx = canvas.getContext("2d");
-          ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-          resolve(canvas.toDataURL("image/jpeg", 0.8));
-        };
-        img.src = event.target?.result as string;
-      };
-      reader.readAsDataURL(file);
-    });
+      const maxDimension = 1600;
+      const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+      canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("Could not prepare this photo. Please choose another image.");
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.72));
+      if (!blob) throw new Error("Could not prepare this photo. Please choose another image.");
+
+      return await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => typeof reader.result === "string"
+          ? resolve(reader.result)
+          : reject(new Error("Could not prepare this photo. Please choose another image."));
+        reader.onerror = () => reject(new Error("Could not read this photo. Please choose another image."));
+        reader.readAsDataURL(blob);
+      });
+    } finally {
+      URL.revokeObjectURL(sourceUrl);
+    }
   };
 
   const handleCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const fileList = Array.from(files);
-    const compressedList = await Promise.all(fileList.map((file) => compressImage(file)));
-
-    setImages((prev) => [...prev, ...compressedList].slice(0, 3));
-    setResult(null);
-    e.target.value = "";
+    const availableSlots = Math.max(0, 3 - images.length);
+    const fileList = Array.from(files).slice(0, availableSlots);
+    try {
+      const compressedList = await Promise.all(fileList.map((file) => compressImage(file)));
+      setImages((prev) => [...prev, ...compressedList].slice(0, 3));
+      setScanError("");
+      setResult(null);
+    } catch (error) {
+      setScanError(error instanceof Error ? error.message : "Could not prepare the selected photo.");
+    } finally {
+      e.target.value = "";
+    }
   };
 
   const removeImage = (index: number) => {
@@ -77,24 +96,50 @@ export default function Home() {
   const handleAnalyze = async () => {
     if (images.length === 0) return;
     setLoading(true);
+    setUploadProgress(0);
+    setScanError("");
     setResult(null);
 
     try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        throw new Error("You appear to be offline. Reconnect, then retry; your selected photos are kept.");
+      }
+
+      const data = await new Promise<any>((resolve, reject) => {
+        const request = new XMLHttpRequest();
+        request.open("POST", "/api/analyze");
+        request.timeout = 70_000;
+        request.setRequestHeader("Content-Type", "application/json");
+        request.upload.onprogress = (event) => {
+          if (event.lengthComputable && event.total > 0) {
+            setUploadProgress(Math.min(100, Math.round((event.loaded / event.total) * 100)));
+          }
+        };
+        request.onload = () => {
+          let response: any;
+          try {
+            response = JSON.parse(request.responseText);
+          } catch {
+            reject(new Error("The server returned an invalid response. Please retry."));
+            return;
+          }
+          if (request.status < 200 || request.status >= 300) {
+            reject(new Error(response.error || "Analysis failed. Please retry."));
+            return;
+          }
+          resolve(response);
+        };
+        request.onerror = () => reject(new Error("Connection interrupted. Your photos are kept; reconnect and retry."));
+        request.ontimeout = () => reject(new Error("The request timed out. Your photos are kept; retry when your connection is stable."));
+        request.send(JSON.stringify({
           imagesBase64: images,
           userCountry,
           userTimezone,
-        }),
+        }));
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Analysis failed");
       setResult(data);
     } catch (err: any) {
-      alert(err.message || "An unexpected error occurred.");
+      setScanError(err.message || "An unexpected error occurred. Your photos are kept so you can retry.");
     } finally {
       setLoading(false);
     }
@@ -214,7 +259,7 @@ export default function Home() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                     </svg>
-                    <span>Evaluating Label & Compliance...</span>
+                    <span>{uploadProgress < 100 ? `Uploading photos ${uploadProgress}%...` : "Analyzing label..."}</span>
                   </>
                 ) : (
                   <span>Evaluate Health Verdict</span>
@@ -228,6 +273,11 @@ export default function Home() {
                 Reset
               </button>
             </div>
+          )}
+          {scanError && (
+            <p role="alert" className="mt-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs leading-relaxed text-rose-200">
+              {scanError}
+            </p>
           )}
         </section>
 
@@ -458,4 +508,3 @@ export default function Home() {
     </div>
   );
 }
-
