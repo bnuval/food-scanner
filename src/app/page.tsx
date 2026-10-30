@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
-const ANALYSIS_CACHE_PREFIX = "purebite:analysis:v1:";
+const ANALYSIS_CACHE_PREFIX = "purebite:analysis:v2:";
 const ANALYSIS_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_CACHED_ANALYSES = 40;
+const BUY_THRESHOLD = 65;
 
 type CachedAnalysis = { expiresAt: number; result: unknown };
 
@@ -214,7 +215,9 @@ export default function Home() {
     }
   };
 
-  const isBuy = result?.verdict === "BUY";
+  const isBuy = typeof result?.healthScore === "number"
+    ? result.healthScore >= BUY_THRESHOLD
+    : result?.verdict === "BUY";
   const isIndia = userCountry === "India";
 
   return (

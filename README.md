@@ -20,7 +20,8 @@ This repository contains two apps that share one backend:
 
 **Package scanner** — up to 3 photos (ingredient list, nutrition table, front/barcode) are
 scored by Gemini on a 0–100 scale modelled on the Yuka 3-pillar method (nutrition 60 %,
-additives 30 %, organic/natural 10 %). The result shows the verdict (BUY at 65+), the main
+additives 30 %, organic/natural 10 %). The app derives the verdict from the score: BUY at 65 or
+above, AVOID below 65. The result shows the main
 reason, flagged ingredients, positive highlights, country-specific regulatory notes and 2–3
 better alternatives with store links.
 On the web, an identical compressed photo set in the same market reuses its saved result in that

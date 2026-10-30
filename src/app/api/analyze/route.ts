@@ -10,6 +10,7 @@ export const maxDuration = 60;
 
 const ATTEMPT_TIMEOUTS_MS: [number, number] = [12_000, 8_000];
 const MAX_ANALYSIS_OUTPUT_TOKENS = 3072;
+const BUY_THRESHOLD = 65;
 
 const ModelAnalysisSchema = z.object({
   isReadable: z.boolean(),
@@ -168,6 +169,7 @@ Assess all submitted images together. They may show different sides of the same 
     return NextResponse.json(
       {
         ...analysis,
+        verdict: analysis.healthScore >= BUY_THRESHOLD ? "BUY" : "AVOID",
         alternatives: analysis.alternatives.map((alternative) => ({
           ...alternative,
           purchaseUrl: purchaseUrl(alternative.brand, alternative.productName, userCountry),
