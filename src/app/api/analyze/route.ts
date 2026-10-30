@@ -78,24 +78,46 @@ Do NOT include markdown formatting, backticks, or prose. Return only pure JSON.`
       },
     };
 
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    // Use models verified in your v1 list
+    const candidateModels = [
+      "gemini-2.5-flash",
+      "gemini-2.5-flash-lite",
+      "gemini-2.5-pro"
+    ];
 
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      cache: "no-store",
-    });
+    let apiData = null;
+    let endpointErrors: string[] = [];
 
-    if (!res.ok) {
-      const errText = await res.text();
+    for (const model of candidateModels) {
+      const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`;
+
+      try {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          cache: "no-store",
+        });
+
+        if (res.ok) {
+          apiData = await res.json();
+          break;
+        }
+
+        const errText = await res.text();
+        endpointErrors.push(`${model} (HTTP ${res.status}): ${errText}`);
+      } catch (err: any) {
+        endpointErrors.push(`${model} fetch error: ${err?.message || err}`);
+      }
+    }
+
+    if (!apiData) {
       return NextResponse.json(
-        { error: `Google API Error (HTTP ${res.status}): ${errText}` },
-        { status: res.status }
+        { error: "AI service failed to evaluate item.", details: endpointErrors },
+        { status: 502 }
       );
     }
 
-    const apiData = await res.json();
     const rawText = apiData?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
 
     const cleanJson = rawText
