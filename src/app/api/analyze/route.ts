@@ -78,23 +78,27 @@ Do NOT include markdown formatting, backticks, or prose. Return only pure JSON.`
       },
     };
 
-    // Use models verified in your v1 list
-    const candidateModels = [
-      "gemini-2.5-flash",
+    // Cascade: Fast flash models first, fallback to lite if throttled
+    const modelsToTry = [
+      "gemini-3.5-flash",
+      "gemini-3.1-flash-lite",
+      "gemini-3.5-flash-lite",
       "gemini-2.5-flash-lite",
-      "gemini-2.5-pro"
+      "gemini-3.8-flash"
     ];
 
     let apiData = null;
     let endpointErrors: string[] = [];
 
-    for (const model of candidateModels) {
-      const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`;
-
+    for (const model of modelsToTry) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
       try {
         const res = await fetch(url, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": apiKey
+          },
           body: JSON.stringify(payload),
           cache: "no-store",
         });
@@ -105,16 +109,16 @@ Do NOT include markdown formatting, backticks, or prose. Return only pure JSON.`
         }
 
         const errText = await res.text();
-        endpointErrors.push(`${model} (HTTP ${res.status}): ${errText}`);
+        endpointErrors.push(`[${model} HTTP ${res.status}]: ${errText}`);
       } catch (err: any) {
-        endpointErrors.push(`${model} fetch error: ${err?.message || err}`);
+        endpointErrors.push(`[${model} error]: ${err?.message || err}`);
       }
     }
 
     if (!apiData) {
       return NextResponse.json(
-        { error: "AI service failed to evaluate item.", details: endpointErrors },
-        { status: 502 }
+        { error: "AI service is momentarily unavailable. Please retry in a few seconds.", details: endpointErrors },
+        { status: 503 }
       );
     }
 
