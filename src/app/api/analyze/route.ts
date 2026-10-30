@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { GeminiNotConfiguredError, generateJson, type GeminiPart } from "../_lib/gemini";
 import { errorResponse, readJsonBody, requestMeta } from "../_lib/http";
-import { enforceRateLimit } from "../_lib/rate-limit";
 import { AnalyzeRequestSchema, isOversizedImage, issuePaths, MAX_JSON_BODY_BYTES } from "../_lib/validation";
 
 export const runtime = "nodejs";
@@ -119,9 +118,6 @@ export async function POST(req: NextRequest) {
   const headers = { "X-Request-Id": meta.requestId };
 
   try {
-    const limited = await enforceRateLimit("analyze", req, meta);
-    if (limited) return limited;
-
     const body = await readJsonBody(req, MAX_JSON_BODY_BYTES);
     if ("failure" in body) {
       return errorResponse(body.failure, body.failure === 413 ? "PAYLOAD_TOO_LARGE" : "INVALID_REQUEST", headers);

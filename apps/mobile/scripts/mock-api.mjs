@@ -183,7 +183,7 @@ const server = createServer(async (req, res) => {
       const kb = Math.round(images.reduce((n, i) => n + String(i).length, 0) / 1024);
       console.log(
         `analyze: ${images.length} image(s), ${kb} KB base64, market=${body.userCountry}, tz=${body.userTimezone}, barcode=${body.barcode ?? '-'}, ` +
-          `v=${req.headers['x-app-version']}, install=${String(req.headers['x-install-id'] ?? '').slice(0, 8)}…, scenario=${s}`,
+          `v=${req.headers['x-app-version']}, scenario=${s}`,
       );
       await sleep(s === 'slow' ? 70_000 : 4_500);
       const fixture = (fixtures[s] ?? fixtures.avoid)(body.userCountry ?? 'India');

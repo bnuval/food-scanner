@@ -21,7 +21,7 @@ alternatives you can buy nearby. Android ships first; iOS builds from the same c
 
 **Analysis and results**
 - Live progress (upload → reading label → checking ingredients → finding alternatives), cancel at
-  any time, clear messages for no internet, timeouts, rate limits and unreadable photos — your
+  any time, clear messages for no internet, timeouts and unreadable photos — your
   photos are kept so you can retry without reshooting.
 - Animated score ring with band (Excellent / Good / Poor / Bad) and a BUY/AVOID verdict that never
   relies on colour alone.
@@ -50,7 +50,7 @@ large-font support, Hindi typography with Noto Sans Devanagari, haptic feedback.
 | Navigation | expo-router (file routes), NativeTabs (native Material bottom navigation) |
 | UI | Material 3 design tokens (`src/theme`), react-native-svg icons, Reanimated 4 |
 | Camera & images | expo-camera (CameraX + ML Kit barcodes), expo-image-picker (Photo Picker), expo-image-manipulator |
-| Data | TanStack Query, zod contract (`src/shared`), expo-sqlite (history), expo-secure-store (install id) |
+| Data | TanStack Query, zod contract (`src/shared`), expo-sqlite (history) |
 | i18n | Typed English/Hindi dictionaries — a missing translation fails the type check |
 
 `android/` and `ios/` are **generated** by `npx expo prebuild` and git-ignored. Never edit them;
@@ -256,8 +256,8 @@ upload the new `.aab` to a testing track → promote to production.
   thumbnail is kept in the local history. Leftover temporary images are swept at startup.
 - Every server response is validated, length-capped and shown as plain text; store links open
   only for an exact allowlist of https retailer hosts.
-- A random install id (not tied to the user) is sent as `X-Install-Id` so the server can
-  rate-limit per install. Release builds log nothing. R8 minification is on.
+- No device or install identifier is sent to the server. Release builds log nothing. R8
+  minification is on.
 
 ## Troubleshooting
 

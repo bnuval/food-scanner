@@ -5,7 +5,6 @@ import type { AnalyzeRequest } from '@/shared/api-schema';
 import { analyzeLabel, isApiError } from '../api';
 
 jest.mock('../config', () => ({ config: { apiBaseUrl: 'https://api.example.test', appVersion: '1.0.0' } }));
-jest.mock('../install-id', () => ({ getInstallId: async () => 'install-id' }));
 jest.mock('@/security/attestation', () => ({ getAttestationHeaders: async () => ({}) }));
 
 type ProgressHandler = (event: { lengthComputable: boolean; loaded: number; total: number }) => void;

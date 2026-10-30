@@ -11,7 +11,6 @@ import {
 } from '@/shared/api-schema';
 
 import { config } from './config';
-import { getInstallId } from './install-id';
 
 // Current backend routes. When the hardened, versioned routes ship (/api/v1/...),
 // only these two constants change.
@@ -87,7 +86,6 @@ async function headers(requestId: string): Promise<Record<string, string>> {
     Accept: 'application/json',
     'X-App-Version': config.appVersion,
     'X-Platform': Platform.OS,
-    'X-Install-Id': await getInstallId(),
     'X-Request-Id': requestId,
     ...(await getAttestationHeaders()),
   };

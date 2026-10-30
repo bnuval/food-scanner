@@ -1,7 +1,6 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { GeminiNotConfiguredError, generateJson } from "../_lib/gemini";
 import { errorResponse, readJsonBody, requestMeta } from "../_lib/http";
-import { enforceRateLimit } from "../_lib/rate-limit";
 import { SearchRequestSchema, issuePaths } from "../_lib/validation";
 
 export const runtime = "nodejs";
@@ -77,9 +76,6 @@ export async function POST(req: NextRequest) {
   const headers = { "X-Request-Id": meta.requestId };
 
   try {
-    const limited = await enforceRateLimit("search", req, meta);
-    if (limited) return limited;
-
     const body = await readJsonBody(req, MAX_BODY_BYTES);
     if ("failure" in body) {
       return errorResponse(body.failure, body.failure === 413 ? "PAYLOAD_TOO_LARGE" : "INVALID_REQUEST", headers);

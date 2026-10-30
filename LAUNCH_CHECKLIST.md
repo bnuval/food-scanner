@@ -3,15 +3,12 @@
 Work through this top to bottom before the hardened API goes live and before the Android app is
 published. Tick items off in a PR or copy the list into an issue.
 
-## 1. Backend (do this first — production analyze/search are blocked until it is done)
+## 1. Backend
 
-The API now **fails closed** in production: without Redis-backed rate limiting, `/api/analyze`
-and `/api/search-products` return errors instead of running unmetered Gemini calls.
+The public API has no request rate limits, including failed admin login attempts. Each analyze or
+search request can incur Gemini API cost. Configure strict Gemini quotas and billing alerts, and
+use a strong unique `ADMIN_PASSWORD`, before sharing the production URL.
 
-- [ ] **Create an Upstash Redis database** (Vercel: *Storage → Marketplace → Upstash for Redis*,
-      which adds `KV_REST_API_URL` / `KV_REST_API_TOKEN`; or console.upstash.com and set
-      `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN`). Pick a region near your users
-      (Mumbai for India).
 - [ ] **Set a new `ADMIN_PASSWORD`.** The old fallback password `PureBiteAdmin2026` is visible in
       public git history; treat it as leaked. The admin dashboard stays disabled until this is set.
 - [ ] **Rotate the JSONBin master key** (`JSONBIN_API_KEY`) — anyone who used the leaked admin
@@ -24,8 +21,6 @@ and `/api/search-products` return errors instead of running unmetered Gemini cal
   - [ ] Add a **budget alert** and a per-day quota in Google Cloud.
   - [ ] Confirm the pinned models (`gemini-3.8-flash`, fallback `gemini-3.6-flash`) are enabled
         for your key; otherwise set `GEMINI_MODEL` / `GEMINI_FALLBACK_MODEL`.
-- [ ] Optionally tune `GLOBAL_DAILY_ANALYZE_LIMIT` (1000) and `GLOBAL_DAILY_SEARCH_LIMIT` (3000)
-      to cap the daily Gemini spend.
 - [ ] **Redeploy**, then make sure the production URL is public: Vercel *Deployment Protection*
       must not apply to the production domain (the current `*.vercel.app` deployments ask for a
       Vercel login, which blocks the app). A **custom domain** is strongly recommended because it
@@ -45,7 +40,7 @@ and `/api/search-products` return errors instead of running unmetered Gemini cal
       `com.yourcompany.purebite`.
 - [ ] **Privacy policy** published at a public https URL (not geo-blocked). It must cover: label
       photos and search queries sent to your server and to Google Gemini for analysis and not
-      stored; the random install id and IP address used only for rate limiting; scan history kept
+      stored; IP addresses used to derive an anonymous daily analytics hash; scan history kept
       only on the device; no ads, no tracking, no data sale; contact address.
 - [ ] **Terms of use** URL (recommended) and a **support email** — the email powers the in-app
       "Report a problem with this result" action, which Google Play expects for AI-generated
@@ -78,7 +73,6 @@ and `/api/search-products` return errors instead of running unmetered Gemini cal
   - [ ] **Data safety** (adjust to your final privacy policy):
         Photos — collected, processed ephemerally, required for app functionality, not shared;
         App activity (in-app search) — collected, ephemeral, app functionality;
-        Device or other IDs (random install id) — collected, fraud prevention/security;
         encrypted in transit: yes; no data sold; no data used for ads.
   - [ ] Government app / financial features / news app: no.
 - [ ] **Store listing** — text drafts and graphics are in `apps/mobile/store/`:
@@ -97,8 +91,9 @@ and `/api/search-products` return errors instead of running unmetered Gemini cal
 
 - [ ] Every update: bump `version` and `android.versionCode` in `app.config.ts`, rebuild, re-run
       `scripts/verify-release.sh`, upload with the same upload key.
-- [ ] Watch Gemini spend, 429 rates in logs, and Play Console vitals weekly.
+- [ ] Watch Gemini spend and Play Console vitals weekly.
 - [ ] Plan device attestation (Firebase App Check / Play Integrity) — the client hook is ready in
-      `apps/mobile/src/security/attestation.ts`; the server must verify the token before enforcing.
+      `apps/mobile/src/security/attestation.ts`; the server must verify the token before relying on
+      it for access control.
 - [ ] Before an iOS release: exclude scan history and thumbnails from iCloud backups, add App
       Store listing details, and repeat sections 2–3 for the App Store.

@@ -1,7 +1,6 @@
-﻿import { createHash, timingSafeEqual } from "crypto";
+import { createHash, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { errorResponse, readJsonBody } from "../../_lib/http";
-import { adminLoginRetryAfter, recordAdminLoginFailure } from "../../_lib/rate-limit";
 import { scrubVisitor } from "../../_lib/visitors";
 
 export const runtime = "nodejs";
@@ -25,15 +24,10 @@ export async function POST(req: NextRequest) {
       return errorResponse(503, "SERVICE_UNAVAILABLE");
     }
 
-    const retryAfter = await adminLoginRetryAfter(req);
-    if (retryAfter === null) return errorResponse(503, "SERVICE_UNAVAILABLE");
-    if (retryAfter > 0) return errorResponse(429, "RATE_LIMITED", { "Retry-After": String(retryAfter) });
-
     const body = await readJsonBody(req, MAX_BODY_BYTES);
     const password = "data" in body ? (body.data as { password?: unknown } | null)?.password : undefined;
 
     if (typeof password !== "string" || !password || !passwordMatches(password, expectedPassword)) {
-      await recordAdminLoginFailure(req);
       return errorResponse(401, "UNAUTHORIZED");
     }
 

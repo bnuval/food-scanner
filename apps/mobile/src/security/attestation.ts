@@ -15,8 +15,8 @@
  *   });
  *
  * The backend then verifies the JWT (jose + Google's JWKS) before calling Gemini.
- * Until a provider is registered no attestation header is sent, and the backend must
- * rely on rate limits alone.
+ * Until a provider is registered no attestation header is sent, so the backend cannot
+ * distinguish genuine app installs from scripts replaying requests.
  */
 export type AttestationProvider = {
   getHeaders(): Promise<Record<string, string>>;

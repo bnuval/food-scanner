@@ -4,7 +4,6 @@ import { NextRequest, NextResponse } from "next/server";
 export type ErrorCode =
   | "INVALID_REQUEST"
   | "PAYLOAD_TOO_LARGE"
-  | "RATE_LIMITED"
   | "UNAUTHORIZED"
   | "SERVICE_UNAVAILABLE"
   | "ANALYSIS_FAILED"
@@ -15,7 +14,6 @@ export type ErrorCode =
 const ERROR_MESSAGES: Record<ErrorCode, string> = {
   INVALID_REQUEST: "Invalid request.",
   PAYLOAD_TOO_LARGE: "Upload is too large. Use up to 3 smaller photos.",
-  RATE_LIMITED: "Too many requests. Please wait a moment and try again.",
   UNAUTHORIZED: "Unauthorized access",
   SERVICE_UNAVAILABLE: "Service is temporarily unavailable. Please try again later.",
   ANALYSIS_FAILED: "Could not analyze this label. Please try again with clearer photos.",
@@ -31,10 +29,9 @@ export function errorResponse(
   return NextResponse.json({ code, error: ERROR_MESSAGES[code] }, { status, headers });
 }
 
-/** Per-request metadata from the headers the mobile app sends (all optional for web callers). */
+/** Per-request metadata from optional mobile app headers. */
 export type RequestMeta = {
   requestId: string;
-  installId: string | null;
   appVersion: string | null;
   platform: string | null;
 };
@@ -47,11 +44,8 @@ function headerToken(req: NextRequest, name: string): string | null {
 }
 
 export function requestMeta(req: NextRequest): RequestMeta {
-  const installId = headerToken(req, "x-install-id");
   return {
     requestId: headerToken(req, "x-request-id") ?? randomUUID(),
-    // Install ids are app-generated UUIDs; anything shorter is not worth a rate-limit bucket.
-    installId: installId && installId.length >= 16 ? installId : null,
     appVersion: headerToken(req, "x-app-version"),
     platform: headerToken(req, "x-platform"),
   };
@@ -119,7 +113,7 @@ export function ipBucket(ip: string): string {
   return `${groups.slice(0, 4).map((g) => g.toLowerCase() || "0").join(":")}::/64`;
 }
 
-/** One-way identifier for storage keys, so raw addresses and install ids never reach Redis. */
+/** One-way identifier for storage keys, so raw addresses never reach analytics storage. */
 export function hashIdentifier(value: string): string {
   const secret = process.env.IP_HASH_SECRET?.trim();
   const digest = secret

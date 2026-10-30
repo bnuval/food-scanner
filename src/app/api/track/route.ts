@@ -1,6 +1,5 @@
 ﻿import { NextRequest, NextResponse } from "next/server";
-import { getClientIp, readJsonBody, requestMeta } from "../_lib/http";
-import { enforceRateLimit } from "../_lib/rate-limit";
+import { getClientIp, readJsonBody } from "../_lib/http";
 import { MARKETS } from "../_lib/validation";
 import { dailyVisitorId, scrubVisitor } from "../_lib/visitors";
 
@@ -23,10 +22,6 @@ function normalizeCountry(value: unknown): string {
 
 export async function POST(req: NextRequest) {
   try {
-    // Analytics are best effort: without Redis the write still happens, just unthrottled.
-    const limited = await enforceRateLimit("track", req, requestMeta(req), { failOpen: true });
-    if (limited) return limited;
-
     const body = await readJsonBody(req, MAX_BODY_BYTES);
     if ("failure" in body) return NextResponse.json({ success: false }, { status: body.failure });
     const { path, country } = (body.data ?? {}) as { path?: unknown; country?: unknown };

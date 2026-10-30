@@ -64,7 +64,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     // system Photo Picker, which needs no media permission; haptics use
     // View.performHapticFeedback, which needs no VIBRATE permission.
     blockedPermissions: [
-      // Merged by androidx.biometric (expo-secure-store); the app never asks for biometrics.
       'android.permission.USE_BIOMETRIC',
       'android.permission.USE_FINGERPRINT',
       'android.permission.SYSTEM_ALERT_WINDOW',
@@ -120,7 +119,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     ],
     ['expo-localization', { supportedLocales: { android: ['en', 'hi'], ios: ['en', 'hi'] } }],
     'expo-sqlite',
-    ['expo-secure-store', { faceIDPermission: false }],
     [
       'expo-build-properties',
       {
