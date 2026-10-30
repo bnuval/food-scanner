@@ -6,18 +6,10 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
 
-    // Detect image from any key (imagesbase64, imagesBase64, image, dataUrl, photo, file, etc.)
     let rawImageData: any = null;
-    const allKeys = Object.keys(body);
-
-    for (const key of allKeys) {
+    for (const key of Object.keys(body)) {
       const lower = key.toLowerCase();
-      if (
-        lower.includes("image") ||
-        lower.includes("photo") ||
-        lower.includes("dataurl") ||
-        lower.includes("file")
-      ) {
+      if (lower.includes("image") || lower.includes("photo") || lower.includes("dataurl") || lower.includes("file")) {
         if (body[key]) {
           rawImageData = body[key];
           break;
@@ -25,34 +17,25 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // If it's an array of strings, take the first valid non-empty string
     if (Array.isArray(rawImageData)) {
       rawImageData = rawImageData.find((img) => typeof img === "string" && img.trim().length > 0) || null;
     }
 
-    const rawQuery =
-      body.query ||
-      body.productQuery ||
-      body.text ||
-      body.ingredients ||
-      body.search ||
-      null;
-
+    const rawQuery = body.query || body.productQuery || body.text || body.ingredients || body.search || null;
     const hasValidImage = typeof rawImageData === "string" && rawImageData.trim().length > 30;
     const hasValidQuery = typeof rawQuery === "string" && rawQuery.trim().length > 0;
 
     if (!hasValidImage && !hasValidQuery) {
-      console.warn("Payload missing image and query. Received keys:", Object.keys(body));
       return NextResponse.json(
         { error: "Please provide a product image or ingredient text to analyze." },
         { status: 400 }
       );
     }
 
-    const apiKey = process.env.GEMINI_API_KEY?.trim();
+    const apiKey = (process.env.GEMINI_API_KEY || process.env["GEMINI_API_KEY"])?.trim();
     if (!apiKey) {
       return NextResponse.json(
-        { error: "GEMINI_API_KEY is not configured on Netlify." },
+        { error: "GEMINI_API_KEY is not defined in Netlify environment variables." },
         { status: 500 }
       );
     }
@@ -106,9 +89,8 @@ Do NOT include markdown formatting, backticks, or prose. Return only pure JSON.`
 
     if (!res.ok) {
       const errText = await res.text();
-      console.error("Gemini API Error:", res.status, errText);
       return NextResponse.json(
-        { error: "AI service is temporarily busy. Please hold steady and retry." },
+        { error: `Google API Error (HTTP ${res.status}): ${errText}` },
         { status: res.status }
       );
     }
@@ -131,9 +113,8 @@ Do NOT include markdown formatting, backticks, or prose. Return only pure JSON.`
       throw new Error("Unable to parse model output as JSON");
     }
   } catch (error: any) {
-    console.error("Analyze error:", error);
     return NextResponse.json(
-      { error: "Unable to complete scan. Please try again." },
+      { error: "Scanner internal error: " + (error?.message || error) },
       { status: 500 }
     );
   }
