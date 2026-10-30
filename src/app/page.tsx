@@ -3,12 +3,68 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
+const ANALYSIS_CACHE_PREFIX = "purebite:analysis:v1:";
+const ANALYSIS_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+const MAX_CACHED_ANALYSES = 40;
+
+type CachedAnalysis = { expiresAt: number; result: unknown };
+
+async function analysisCacheKey(images: string[], country: string): Promise<string | null> {
+  if (!globalThis.crypto?.subtle) return null;
+  const content = new TextEncoder().encode(JSON.stringify({ images, country }));
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", content);
+  const hash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `${ANALYSIS_CACHE_PREFIX}${hash}`;
+}
+
+function readCachedAnalysis(key: string): unknown | null {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const cached = JSON.parse(raw) as CachedAnalysis;
+    if (cached.expiresAt <= Date.now() || !cached.result || typeof cached.result !== "object") {
+      localStorage.removeItem(key);
+      return null;
+    }
+    return cached.result;
+  } catch (error) {
+    console.warn("[analysis-cache] Could not read cached scan", error);
+    return null;
+  }
+}
+
+function writeCachedAnalysis(key: string, result: unknown): void {
+  try {
+    const now = Date.now();
+    const entries: Array<{ key: string; expiresAt: number }> = [];
+    for (let index = 0; index < localStorage.length; index++) {
+      const entryKey = localStorage.key(index);
+      if (!entryKey?.startsWith(ANALYSIS_CACHE_PREFIX)) continue;
+      try {
+        const entry = JSON.parse(localStorage.getItem(entryKey) || "null") as CachedAnalysis | null;
+        if (entry && entry.expiresAt > now) entries.push({ key: entryKey, expiresAt: entry.expiresAt });
+        else localStorage.removeItem(entryKey);
+      } catch {
+        localStorage.removeItem(entryKey);
+      }
+    }
+    entries.sort((a, b) => a.expiresAt - b.expiresAt);
+    while (entries.length >= MAX_CACHED_ANALYSES) {
+      localStorage.removeItem(entries.shift()!.key);
+    }
+    localStorage.setItem(key, JSON.stringify({ expiresAt: now + ANALYSIS_CACHE_TTL_MS, result }));
+  } catch (error) {
+    console.warn("[analysis-cache] Could not save scan result", error);
+  }
+}
+
 export default function Home() {
   const [images, setImages] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [scanError, setScanError] = useState("");
   const [result, setResult] = useState<any>(null);
+  const [showingCachedResult, setShowingCachedResult] = useState(false);
   const [userCountry, setUserCountry] = useState<string>("India");
   const [userTimezone, setUserTimezone] = useState<string>("");
 
@@ -81,6 +137,7 @@ export default function Home() {
       setImages((prev) => [...prev, ...compressedList].slice(0, 3));
       setScanError("");
       setResult(null);
+      setShowingCachedResult(false);
     } catch (error) {
       setScanError(error instanceof Error ? error.message : "Could not prepare the selected photo.");
     } finally {
@@ -91,6 +148,7 @@ export default function Home() {
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
     setResult(null);
+    setShowingCachedResult(false);
   };
 
   const handleAnalyze = async () => {
@@ -99,8 +157,18 @@ export default function Home() {
     setUploadProgress(0);
     setScanError("");
     setResult(null);
+    setShowingCachedResult(false);
 
     try {
+      const cacheKey = await analysisCacheKey(images, userCountry);
+      const cached = cacheKey ? readCachedAnalysis(cacheKey) : null;
+      if (cached) {
+        setResult(cached);
+        setShowingCachedResult(true);
+        setUploadProgress(100);
+        return;
+      }
+
       if (typeof navigator !== "undefined" && !navigator.onLine) {
         throw new Error("You appear to be offline. Reconnect, then retry; your selected photos are kept.");
       }
@@ -137,6 +205,7 @@ export default function Home() {
           userTimezone,
         }));
       });
+      if (cacheKey) writeCachedAnalysis(cacheKey, data);
       setResult(data);
     } catch (err: any) {
       setScanError(err.message || "An unexpected error occurred. Your photos are kept so you can retry.");
@@ -293,6 +362,11 @@ export default function Home() {
         {/* Results Screen */}
         {result && (
           <section className="flex flex-col gap-3">
+            {showingCachedResult && (
+              <p className="rounded-xl border border-sky-500/30 bg-sky-500/10 px-3 py-2 text-xs text-sky-200">
+                Showing the saved analysis for this photo in this browser.
+              </p>
+            )}
             {!result.isReadable ? (
               <div className="p-5 bg-amber-500/10 border border-amber-500/30 rounded-3xl text-center">
                 <h3 className="text-sm font-bold text-amber-400">Photo Not Legible</h3>

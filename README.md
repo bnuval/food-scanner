@@ -23,6 +23,8 @@ scored by Gemini on a 0–100 scale modelled on the Yuka 3-pillar method (nutrit
 additives 30 %, organic/natural 10 %). The result shows the verdict (BUY at 65+), the main
 reason, flagged ingredients, positive highlights, country-specific regulatory notes and 2–3
 better alternatives with store links.
+On the web, an identical compressed photo set in the same market reuses its saved result in that
+browser for up to 30 days; only the analysis result and a photo hash are cached, not the photo.
 
 **Product search** — find highly rated food or cosmetics for a query, with links to Amazon,
 Flipkart, Blinkit, Nykaa (India) or Amazon, Walmart, Target, Sephora (US).
