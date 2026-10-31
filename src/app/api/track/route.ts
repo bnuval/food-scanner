@@ -1,7 +1,6 @@
-﻿import { NextRequest, NextResponse } from "next/server";
-import { getClientIp, readJsonBody } from "../_lib/http";
+import { NextRequest, NextResponse } from "next/server";
+import { readJsonBody } from "../_lib/http";
 import { MARKETS } from "../_lib/validation";
-import { dailyVisitorId, scrubVisitor } from "../_lib/visitors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,15 +29,17 @@ export async function POST(req: NextRequest) {
     const binId = process.env.JSONBIN_BIN_ID?.trim();
 
     if (!apiKey || !binId) {
-      return NextResponse.json({ success: false, reason: "Missing JSONBin keys" });
+      console.error("[track] JSONBIN_API_KEY or JSONBIN_BIN_ID is not set");
+      return NextResponse.json(
+        { success: false, reason: "Analytics storage is not configured" },
+        { status: 503 }
+      );
     }
 
     const detectedCountry = normalizeCountry(country);
     const visitedPath = normalizePath(path);
     const now = new Date();
     const today = now.toISOString().split("T")[0];
-    // Never the address itself: an anonymous id that changes every day, or just "anon".
-    const visitorId = dailyVisitorId(getClientIp(req), today);
 
     // 1. Fetch the current records
     const getRes = await fetch(`https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}/latest`, {
@@ -73,19 +74,8 @@ export async function POST(req: NextRequest) {
     data.dailyVisits = data.dailyVisits || {};
     data.dailyVisits[today] = (data.dailyVisits[today] || 0) + 1;
 
-    // Also removes raw IPs that older versions of this route stored.
-    data.recentVisitors = (Array.isArray(data.recentVisitors) ? data.recentVisitors : []).map(scrubVisitor);
-    data.recentVisitors.unshift({
-      timestamp: now.toISOString(),
-      country: detectedCountry,
-      path: visitedPath,
-      ip: visitorId,
-    });
-
-    // Keep log of last 100 granular visits
-    if (data.recentVisitors.length > 100) {
-      data.recentVisitors = data.recentVisitors.slice(0, 100);
-    }
+    // Drop the per-visit log used by older versions; analytics now stores aggregates only.
+    data.recentVisitors = [];
 
     // 3. Update the JSONBin document
     const putRes = await fetch(`https://api.jsonbin.io/v3/b/${encodeURIComponent(binId)}`, {

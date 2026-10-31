@@ -8,13 +8,13 @@ published. Tick items off in a PR or copy the list into an issue.
 The public API has no request rate limits, including failed admin login attempts. Analyze and
 search try both Gemini models in parallel, so one user request can incur charges for both model
 attempts. Configure strict Gemini quotas and billing alerts, and use a strong unique
-`ADMIN_PASSWORD`, before sharing the production URL.
+admin password, before sharing the production URL.
 
-- [ ] **Set a new `ADMIN_PASSWORD`.** The old fallback password `PureBiteAdmin2026` is visible in
-      public git history; treat it as leaked. The admin dashboard stays disabled until this is set.
-- [ ] **Rotate the JSONBin master key** (`JSONBIN_API_KEY`) — anyone who used the leaked admin
-      password could see the analytics, and the old key protected that data.
-- [ ] **Set `IP_HASH_SECRET`** to a random value: `openssl rand -hex 32`.
+- [ ] **Initialize admin access** with a salted scrypt password hash in the private JSONBin record
+      (`adminPasswordHash`); configure `JSONBIN_API_KEY` and `JSONBIN_BIN_ID` as server-side
+      environment variables. A previous fallback password was committed to public git history;
+      treat it as leaked and do not reuse it.
+- [ ] **Rotate the JSONBin master key** (`JSONBIN_API_KEY`) if it may have been exposed.
 - [ ] **Gemini key hygiene:**
   - [ ] Use the **paid tier** (no training on user photos; required if you offer the app in the
         EEA, UK or Switzerland).
@@ -41,8 +41,8 @@ attempts. Configure strict Gemini quotas and billing alerts, and use a strong un
       `com.yourcompany.purebite`.
 - [ ] **Privacy policy** published at a public https URL (not geo-blocked). It must cover: label
       photos and search queries sent to your server and to Google Gemini for analysis and not
-      stored; IP addresses used to derive an anonymous daily analytics hash; scan history kept
-      only on the device; no ads, no tracking, no data sale; contact address.
+      stored; aggregate web page-view analytics; scan history kept only on the device; no ads,
+      no data sale; contact address.
 - [ ] **Terms of use** URL (recommended) and a **support email** — the email powers the in-app
       "Report a problem with this result" action, which Google Play expects for AI-generated
       content.
@@ -73,7 +73,7 @@ attempts. Configure strict Gemini quotas and billing alerts, and use a strong un
         does not provide medical diagnosis or treatment.
   - [ ] **Data safety** (adjust to your final privacy policy):
         Photos — collected, processed ephemerally, required for app functionality, not shared;
-        App activity (in-app search) — collected, ephemeral, app functionality;
+        App activity (in-app search and aggregate web page views) — collected, app functionality;
         encrypted in transit: yes; no data sold; no data used for ads.
   - [ ] Government app / financial features / news app: no.
 - [ ] **Store listing** — text drafts and graphics are in `apps/mobile/store/`:

@@ -3,19 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 
-interface VisitorEntry {
-  timestamp: string;
-  country: string;
-  path: string;
-  ip?: string;
-}
-
 interface StatsData {
   totalVisits: number;
   countryCounts: Record<string, number>;
   pageCounts: Record<string, number>;
   dailyVisits: Record<string, number>;
-  recentVisitors: VisitorEntry[];
   notice?: string;
 }
 
@@ -123,7 +115,7 @@ export default function AdminPage() {
             </div>
             <h2 className="text-base font-bold text-white">Admin Dashboard Login</h2>
             <p className="text-xs text-slate-400 mt-1 mb-4">
-              Enter admin password to review live total hit additions and visitor IP logs.
+              Enter admin password to review aggregate page-view statistics.
             </p>
 
             <form onSubmit={handleLogin} className="space-y-3">
@@ -155,17 +147,18 @@ export default function AdminPage() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="bg-slate-900/90 rounded-2xl p-5 border border-slate-800 shadow-xl flex flex-col justify-between">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                  Total Web Page Hits
+                  Total Page Views
                 </span>
                 <div className="text-4xl font-black text-white mt-2 flex items-baseline gap-2">
                   <span>{stats?.totalVisits || 0}</span>
-                  <span className="text-xs font-semibold text-emerald-400 uppercase">Hits</span>
+                  <span className="text-xs font-semibold text-emerald-400 uppercase">Views</span>
                 </div>
+                <span className="text-[10px] text-slate-500 mt-1">Repeat visits are included</span>
               </div>
 
               <div className="bg-slate-900/90 rounded-2xl p-5 border border-slate-800 shadow-xl flex flex-col justify-between">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                  Markets Logged
+                  Markets
                 </span>
                 <div className="text-4xl font-black text-emerald-400 mt-2">
                   {Object.keys(stats?.countryCounts || {}).length}
@@ -174,7 +167,7 @@ export default function AdminPage() {
 
               <div className="bg-slate-900/90 rounded-2xl p-5 border border-slate-800 shadow-xl flex flex-col justify-between">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                  Unique Active Days
+                  Days with Activity
                 </span>
                 <div className="flex items-center justify-between mt-2">
                   <div className="text-4xl font-black text-sky-400">{sortedDays.length}</div>
@@ -192,14 +185,14 @@ export default function AdminPage() {
               <div className="flex items-center justify-between mb-4">
                 <div>
                   <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                    Visitor Log Table
+                    Page Views by Route
                   </h2>
                   <p className="text-[11px] text-slate-400">
-                    Real-time traffic records including Market, IP, Date, and Time
+                    Aggregate page views by route. No individual visitor or IP logs are stored.
                   </p>
                 </div>
                 <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-800/60 px-2.5 py-1 rounded-full">
-                  {stats?.recentVisitors?.length || 0} Records
+                  {Object.keys(stats?.pageCounts || {}).length} Pages
                 </span>
               </div>
 
@@ -207,54 +200,28 @@ export default function AdminPage() {
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-slate-950/90 border-b border-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      <th className="py-3 px-4">Market</th>
-                      <th className="py-3 px-4">IP Address</th>
-                      <th className="py-3 px-4">Date</th>
-                      <th className="py-3 px-4">Time</th>
                       <th className="py-3 px-4">Page Path</th>
+                      <th className="py-3 px-4">Page Views</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-850 bg-slate-900/50">
-                    {stats?.recentVisitors && stats.recentVisitors.length > 0 ? (
-                      stats.recentVisitors.map((entry, idx) => {
-                        const dateObj = new Date(entry.timestamp);
-                        const formattedDate = dateObj.toLocaleDateString(undefined, {
-                          year: "numeric",
-                          month: "short",
-                          day: "numeric",
-                        });
-                        const formattedTime = dateObj.toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                        });
-
-                        return (
-                          <tr key={idx} className="hover:bg-slate-800/40 transition-colors">
-                            <td className="py-3 px-4 whitespace-nowrap">
-                              <span className="font-semibold text-emerald-400 bg-emerald-950/40 border border-emerald-800/40 px-2 py-0.5 rounded-md">
-                                {entry.country}
-                              </span>
+                    {stats?.pageCounts && Object.keys(stats.pageCounts).length > 0 ? (
+                      Object.entries(stats.pageCounts)
+                        .sort(([, countA], [, countB]) => countB - countA)
+                        .map(([path, count]) => (
+                          <tr key={path} className="hover:bg-slate-800/40 transition-colors">
+                            <td className="py-3 px-4 whitespace-nowrap font-mono text-sky-400 text-[11px]">
+                              {path}
                             </td>
                             <td className="py-3 px-4 whitespace-nowrap font-mono text-slate-200">
-                              {entry.ip || "127.0.0.1"}
-                            </td>
-                            <td className="py-3 px-4 whitespace-nowrap text-slate-300">
-                              {formattedDate}
-                            </td>
-                            <td className="py-3 px-4 whitespace-nowrap font-mono text-slate-400 text-[11px]">
-                              {formattedTime}
-                            </td>
-                            <td className="py-3 px-4 whitespace-nowrap font-mono text-sky-400 text-[11px]">
-                              {entry.path}
+                              {count}
                             </td>
                           </tr>
-                        );
-                      })
+                        ))
                     ) : (
                       <tr>
-                        <td colSpan={5} className="py-6 text-center text-slate-500">
-                          No visitor traffic recorded yet.
+                        <td colSpan={2} className="py-6 text-center text-slate-500">
+                          No page views recorded yet.
                         </td>
                       </tr>
                     )}
@@ -265,7 +232,7 @@ export default function AdminPage() {
 
             <div className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800 shadow-xl">
               <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-3">
-                Daily Hit Summary
+                Daily Page Views
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {sortedDays.slice(0, 8).map(([dateStr, count], idx) => (
@@ -280,7 +247,7 @@ export default function AdminPage() {
                       })}
                     </span>
                     <span className="text-base font-bold text-white font-mono mt-1">
-                      {count} <span className="text-[10px] text-slate-500 font-normal">hits</span>
+                      {count} <span className="text-[10px] text-slate-500 font-normal">views</span>
                     </span>
                   </div>
                 ))}
