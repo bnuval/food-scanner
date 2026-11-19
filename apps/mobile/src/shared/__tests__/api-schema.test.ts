@@ -15,6 +15,7 @@ const goodResult = {
   brandName: 'TastyCo',
   category: 'Condiments',
   healthScore: 38,
+  scoreBreakdown: { nutrition: 28, additives: 5, organic: 5 },
   verdict: 'AVOID',
   primaryReason: 'High added sugar.',
   primaryReasonHindi: 'अतिरिक्त चीनी अधिक है।',
@@ -39,6 +40,7 @@ describe('AnalysisResultSchema', () => {
     expect(r.healthScore).toBe(38);
     expect(r.verdict).toBe('AVOID');
     expect(r.isReadable).toBe(true);
+    expect(r.scoreBreakdown).toEqual({ nutrition: 28, additives: 5, organic: 5 });
     expect(r.alternatives[0].purchaseUrl).toBe('https://www.amazon.in/s?k=Organic%20Tattva');
   });
 
@@ -96,6 +98,15 @@ describe('AnalysisResultSchema', () => {
     expect(r.primaryReasonHindi).toBe('');
     expect(r.complianceNotes).toBe('');
     expect(r.alternatives).toEqual([]);
+    expect(r.scoreBreakdown).toBeNull();
+  });
+
+  it('clamps score breakdown components to their pillar maximums', () => {
+    const r = AnalysisResultSchema.parse({
+      ...goodResult,
+      scoreBreakdown: { nutrition: 80, additives: -1, organic: 12 },
+    });
+    expect(r.scoreBreakdown).toEqual({ nutrition: 60, additives: 0, organic: 10 });
   });
 
   it('honours an explicit unreadable flag', () => {

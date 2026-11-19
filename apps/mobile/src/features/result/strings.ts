@@ -22,9 +22,13 @@ export const resultStrings = defineStrings({
     langEnglishA11y: 'English',
     langHindiA11y: 'Hindi',
 
-    whyBuy: 'Why you should buy',
-    whyAvoid: 'Why you should avoid',
+    whyBuy: 'Why this is a good choice to buy',
     noReason: 'No explanation was provided for this product.',
+    scoreBreakdownTitle: 'Score breakdown',
+    scoreNutrition: 'Nutrition',
+    scoreAdditives: 'Ingredients & additives',
+    scoreOrganic: 'Organic certification',
+    scoreCautionNotice: 'Additive deductions are a screening guide, not a medical assessment.',
 
     ingredientsTitle: 'Ingredients of concern',
     ingredientsCount: '{count} flagged',
@@ -38,7 +42,7 @@ export const resultStrings = defineStrings({
 
     complianceTitle: 'Regulatory notes for {market}',
 
-    altAvoidTitle: 'Healthier alternatives',
+    altAvoidTitle: 'Similar choices',
     altBuyTitle: 'Similar top-rated choices',
     altSubtitle: 'Available in {market}',
     altEmpty: 'No alternatives were suggested for this product.',
@@ -84,9 +88,13 @@ export const resultStrings = defineStrings({
     langEnglishA11y: 'अंग्रेज़ी',
     langHindiA11y: 'हिन्दी',
 
-    whyBuy: 'इसे क्यों खरीदें',
-    whyAvoid: 'इसे क्यों न खरीदें',
+    whyBuy: 'खरीदने के लिए अच्छा विकल्प क्यों है',
     noReason: 'इस प्रोडक्ट के लिए कोई कारण नहीं बताया गया।',
+    scoreBreakdownTitle: 'स्कोर का विवरण',
+    scoreNutrition: 'पोषण',
+    scoreAdditives: 'सामग्री और एडिटिव',
+    scoreOrganic: 'ऑर्गेनिक प्रमाणन',
+    scoreCautionNotice: 'एडिटिव की कटौती केवल शुरुआती जानकारी है, चिकित्सकीय आकलन नहीं।',
 
     ingredientsTitle: 'चिंताजनक सामग्री',
     ingredientsCount: '{count} सामग्री चिह्नित',

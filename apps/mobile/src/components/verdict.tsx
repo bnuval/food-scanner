@@ -33,6 +33,7 @@ export function VerdictPill({ verdict, size = 'medium' }: { verdict: 'BUY' | 'AV
   const { colors, radii } = useTheme();
   const t = useStrings(common);
   const buy = verdict === 'BUY';
+  if (!buy) return null;
   const bg = buy ? colors.buy : colors.avoid;
   const fg = buy ? colors.onBuy : colors.onAvoid;
   const dims = size === 'large' ? { h: 44, icon: 24, pad: 18 } : size === 'small' ? { h: 26, icon: 16, pad: 10 } : { h: 32, icon: 18, pad: 14 };

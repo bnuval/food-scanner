@@ -19,11 +19,18 @@ This repository contains two apps that share one backend:
 ## Features
 
 **Package scanner** — up to 3 photos (ingredient list, nutrition table, front/barcode) are
-scored by Gemini on a 0–100 scale modelled on the Yuka 3-pillar method (nutrition 60 %,
-additives 30 %, organic/natural 10 %). The app derives the verdict from the score: BUY at 65 or
-above, AVOID below 65. The result shows the main
+scored on a 0–100 scale using a Yuka-inspired 3-pillar structure (nutrition 60 points,
+ingredients/additives 30, certified organic 10). The API sums the component scores; it applies
+fixed, deduplicated additive deductions (high 10, moderate 5, limited 2) and a 10-point caution
+deduction for each identified E102, E110 or E124 colour, up to the 30-point pillar limit. This is
+an independent screening rubric, not Yuka's proprietary rating or a medical assessment. The app
+derives the verdict from the score: BUY at 65 or above, AVOID below 65. The result shows the
+component breakdown, main
 reason, flagged ingredients, positive highlights, country-specific regulatory notes and 2–3
-better alternatives with store links.
+better alternatives with store links. On the web, a "Regulatory standards by market" disclosure
+compares label observations across India, the United States, the United Kingdom, the European
+Union, Australia and the UAE, with links to general official references. These observations are
+not a legal compliance assessment.
 On the web, an identical compressed photo set in the same market reuses its saved result in that
 browser for up to 30 days; only the analysis result and a photo hash are cached, not the photo.
 
@@ -33,8 +40,8 @@ Flipkart, Blinkit, Nykaa (India) or Amazon, Walmart, Target, Sephora (US).
 **Markets** — India, United States, United Kingdom, European Union, Australia and UAE
 (inferred from the device time zone; changeable in the mobile app).
 
-**Admin analytics** (web, `/admin`) — page views per day and market; visitors are stored only as
-an anonymous daily hash, never as IP addresses.
+**Admin analytics** (web, `/admin`) — aggregate page views per route, day and market. Counts are
+page views, not unique people; no individual visitor identifiers or IP addresses are stored.
 
 **Mobile-only** — camera-first scanning with barcode detection, on-device scan history, light
 and dark themes, full English/Hindi UI, TalkBack support. See the
@@ -45,7 +52,7 @@ and dark themes, full English/Hindi UI, TalkBack support. See the
 All routes are `POST` with JSON bodies. Analyze and search requests are validated with zod, but
 the public API has no rate limits; each successful request can incur Gemini API cost, and
 parallel model failover can charge for both model attempts.
-Admin password attempts are also unlimited, so use a strong, unique `ADMIN_PASSWORD`.
+Admin password attempts are also unlimited, so use a strong, unique password.
 
 | Route | Body |
 |---|---|
@@ -77,10 +84,40 @@ Netlify → Site configuration → Environment variables). None of them belong i
 | Variable | Required in production | Purpose |
 |---|---|---|
 | `GEMINI_API_KEY` | yes | Google Gemini API key (server-side only) |
-| `ADMIN_PASSWORD` | yes, for `/admin` | Admin dashboard password. No default: the dashboard is disabled when unset. |
-| `IP_HASH_SECRET` | recommended | Secret for the anonymous daily visitor hash (`openssl rand -hex 32`). Without it every visitor is stored as `anon`. |
-| `JSONBIN_API_KEY` + `JSONBIN_BIN_ID` | for analytics | Storage for page-view counters. |
+| `JSONBIN_API_KEY` + `JSONBIN_BIN_ID` | yes, for analytics and `/admin` | Server-only JSONBin credentials for page-view counters and the admin password hash. |
 | `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | no | Override the parallel fast-model attempts (`gemini-3.5-flash-lite` and `gemini-3.1-flash-lite`). |
+
+The `/admin` password is verified against a salted scrypt hash in the private JSONBin record; it
+is never stored there as readable text. Add an `adminPasswordHash` property to the analytics bin.
+The value format is `scrypt$<32 hex salt characters>$<128 hex hash characters>`. Generate one
+locally with Node.js (replace the placeholder with your new password):
+
+```bash
+node -e "const {randomBytes,scryptSync}=require('node:crypto');const salt=randomBytes(16).toString('hex');const hash=scryptSync(process.argv[1],salt,64).toString('hex');console.log(JSON.stringify({adminPasswordHash:'scrypt$'+salt+'$'+hash},null,2))" "YOUR_NEW_PASSWORD"
+```
+
+If the record currently contains a readable password instead of this hash, `/admin` will reject
+it and the stats endpoint will remain unavailable until the record is corrected. Treat any
+password that was stored or shared in readable form as compromised: choose a new, unique password,
+generate its hash locally, and replace `adminPasswordHash` in JSONBin. Preserve the existing
+analytics counters, remove any legacy `recentVisitors` entries, and keep the bin private. The
+change takes effect without a redeploy.
+
+In the JSONBin record, preserve that hash alongside the analytics fields, for example:
+
+```json
+{
+  "adminPasswordHash": "scrypt$<32 hex salt characters>$<128 hex hash characters>",
+  "totalVisits": 0,
+  "countryCounts": {},
+  "pageCounts": {},
+  "dailyVisits": {}
+}
+```
+
+Keep the bin private, configure `JSONBIN_API_KEY` and `JSONBIN_BIN_ID` as Netlify server-side
+environment variables, and redeploy. Never put the JSONBin master key in browser code or share
+the password/hash publicly.
 
 ## Deploy the web app
 

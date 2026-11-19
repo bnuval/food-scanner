@@ -56,24 +56,43 @@ export function ResultView({ record, textLang, onChangeTextLang }: ResultViewPro
     sections.push({ key: 'language', node: <LanguageToggle value={textLang} onChange={onChangeTextLang} /> });
   }
 
-  sections.push({
-    key: 'reason',
-    node: (
-      <View>
-        <SectionHeader
-          title={buy ? t.whyBuy : t.whyAvoid}
-          icon={buy ? 'checkCircle' : 'block'}
-          iconColor={buy ? 'buy' : 'avoid'}
-        />
-        {/* Announces the new text when the explanation language is switched. */}
-        <Card accessibilityLiveRegion="polite">
-          <AppText variant="bodyLarge" color={reason ? 'onSurface' : 'onSurfaceVariant'}>
-            {reason || t.noReason}
-          </AppText>
-        </Card>
-      </View>
-    ),
-  });
+  if (result.scoreBreakdown) {
+    const breakdown = result.scoreBreakdown;
+    sections.push({
+      key: 'score-breakdown',
+      node: (
+        <View>
+          <SectionHeader title={t.scoreBreakdownTitle} icon="eco" />
+          <Card>
+            <AppText variant="bodyMedium">{`${t.scoreNutrition}: ${breakdown.nutrition}/60`}</AppText>
+            <AppText variant="bodyMedium">{`${t.scoreAdditives}: ${breakdown.additives}/30`}</AppText>
+            <AppText variant="bodyMedium">{`${t.scoreOrganic}: ${breakdown.organic}/10`}</AppText>
+            <AppText variant="labelSmall" color="onSurfaceVariant">{t.scoreCautionNotice}</AppText>
+          </Card>
+        </View>
+      ),
+    });
+  }
+
+  if (buy) {
+    sections.push({
+      key: 'reason',
+      node: (
+        <View>
+          <SectionHeader
+            title={t.whyBuy}
+            icon="checkCircle"
+            iconColor="buy"
+          />
+          <Card accessibilityLiveRegion="polite">
+            <AppText variant="bodyLarge" color={reason ? 'onSurface' : 'onSurfaceVariant'}>
+              {reason || t.noReason}
+            </AppText>
+          </Card>
+        </View>
+      ),
+    });
+  }
 
   sections.push({ key: 'ingredients', node: <IngredientList items={result.flaggedIngredients} textLang={textLang} /> });
 
@@ -110,7 +129,13 @@ export function ResultView({ record, textLang, onChangeTextLang }: ResultViewPro
   sections.push({
     key: 'alternatives',
     node: (
-      <Alternatives items={result.alternatives} verdict={result.verdict} score={result.healthScore} marketName={market} />
+      <Alternatives
+        items={result.alternatives}
+        verdict={result.verdict}
+        score={result.healthScore}
+        brandName={result.brandName}
+        marketName={market}
+      />
     ),
   });
 

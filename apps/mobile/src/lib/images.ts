@@ -3,10 +3,10 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
 import { log } from './log';
 
-/** Same limits as the web client: ~1000 px wide JPEG at q0.8 (≈150–300 KB per label photo). */
-const UPLOAD_MAX_WIDTH = 1000;
+/** Retain enough detail for small ingredient text while keeping uploads responsive. */
+const UPLOAD_MAX_WIDTH = 1600;
 const UPLOAD_MAX_HEIGHT = 1600;
-const UPLOAD_QUALITY = 0.8;
+const UPLOAD_QUALITY = 0.82;
 const THUMB_WIDTH = 320;
 
 export type PreparedPhoto = {

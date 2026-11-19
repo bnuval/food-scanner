@@ -12,7 +12,7 @@ import { MARKETS } from './market';
 // Hermes has no `new Function`; skip zod's eval-based fast path instead of probing for it.
 z.config({ jitless: true });
 
-export const BUY_THRESHOLD = 65;
+export const BUY_THRESHOLD = 60;
 export const MAX_PHOTOS = 3;
 
 // Every field helper starts from `z.unknown().optional()`: in zod 4 a bare `z.unknown()`
@@ -84,6 +84,22 @@ const AlternativeSchema = z
   })
   .refine((a) => a.brand.length > 0 || a.productName.length > 0);
 
+const scoreComponent = (maximum: number) => (value: unknown): number | null => {
+  const parsed = typeof value === 'number' ? value : typeof value === 'string' ? Number(value) : NaN;
+  return Number.isFinite(parsed) ? Math.min(maximum, Math.max(0, Math.round(parsed))) : null;
+};
+
+const scoreBreakdown = z.unknown().optional().transform((value) => {
+  if (!value || typeof value !== 'object') return null;
+  const parts = value as Record<string, unknown>;
+  const nutrition = scoreComponent(60)(parts.nutrition);
+  const additives = scoreComponent(30)(parts.additives);
+  const organic = scoreComponent(10)(parts.organic);
+  return nutrition === null || additives === null || organic === null
+    ? null
+    : { nutrition, additives, organic };
+});
+
 export const AnalysisResultSchema = z
   .object({
     isReadable: z
@@ -94,6 +110,7 @@ export const AnalysisResultSchema = z
     brandName: text(60),
     category: text(60),
     healthScore: score,
+    scoreBreakdown,
     verdict: z.unknown().optional(),
     primaryReason: text(600),
     primaryReasonHindi: text(900),

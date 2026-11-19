@@ -18,8 +18,8 @@ export const common = defineStrings({
     share: 'Share',
     openSettings: 'Open settings',
 
-    verdictBuy: 'Buy',
-    verdictAvoid: 'Avoid',
+    verdictBuy: 'Good choice to buy',
+    verdictAvoid: '',
     bandExcellent: 'Excellent',
     bandGood: 'Good',
     bandPoor: 'Poor',
@@ -30,7 +30,7 @@ export const common = defineStrings({
 
     offline: 'You’re offline. Scans and searches need an internet connection.',
     errorOffline: 'No internet connection. Check your connection and try again.',
-    errorTimeout: 'The server took too long to respond. Please try again.',
+    errorTimeout: 'The analysis is taking longer than usual. Please retry in a moment.',
     ok: 'OK',
     updateApp: 'Update app',
     errorRateLimitedOne: 'Too many requests. Please wait 1 second and try again.',
@@ -63,8 +63,8 @@ export const common = defineStrings({
     share: 'शेयर करें',
     openSettings: 'सेटिंग्स खोलें',
 
-    verdictBuy: 'खरीदें',
-    verdictAvoid: 'न खरीदें',
+    verdictBuy: 'खरीदने के लिए अच्छा विकल्प',
+    verdictAvoid: '',
     bandExcellent: 'उत्कृष्ट',
     bandGood: 'अच्छा',
     bandPoor: 'कमज़ोर',
@@ -75,7 +75,7 @@ export const common = defineStrings({
 
     offline: 'आप ऑफ़लाइन हैं। स्कैन और खोज के लिए इंटरनेट ज़रूरी है।',
     errorOffline: 'इंटरनेट कनेक्शन नहीं है। कनेक्शन जाँचें और फिर से कोशिश करें।',
-    errorTimeout: 'सर्वर ने जवाब देने में बहुत समय लिया। कृपया फिर से कोशिश करें।',
+    errorTimeout: 'विश्लेषण में सामान्य से ज़्यादा समय लग रहा है। कृपया थोड़ी देर बाद फिर कोशिश करें।',
     ok: 'ठीक है',
     updateApp: 'ऐप अपडेट करें',
     errorRateLimitedOne: 'बहुत ज़्यादा अनुरोध। कृपया 1 सेकंड रुककर फिर से कोशिश करें।',

@@ -16,7 +16,7 @@ const ERROR_MESSAGES: Record<ErrorCode, string> = {
   PAYLOAD_TOO_LARGE: "Upload is too large. Use up to 3 smaller photos.",
   UNAUTHORIZED: "Unauthorized access",
   SERVICE_UNAVAILABLE: "Service is temporarily unavailable. Please try again later.",
-  ANALYSIS_FAILED: "Could not analyze this label. Please try again with clearer photos.",
+  ANALYSIS_FAILED: "We could not complete the label analysis. Please try again in a moment.",
   SEARCH_FAILED: "Could not find products right now. Please try again.",
   STATS_FAILED: "Failed to load stats.",
 };

@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { MARKET_STANDARDS } from "./market-standards";
 
-const ANALYSIS_CACHE_PREFIX = "purebite:analysis:v2:";
+const ANALYSIS_CACHE_PREFIX = "purebite:analysis:v4:";
 const ANALYSIS_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_CACHED_ANALYSES = 40;
-const BUY_THRESHOLD = 65;
+const BUY_THRESHOLD = 60;
 
 type CachedAnalysis = { expiresAt: number; result: unknown };
 
@@ -177,7 +178,7 @@ export default function Home() {
       const data = await new Promise<any>((resolve, reject) => {
         const request = new XMLHttpRequest();
         request.open("POST", "/api/analyze");
-        request.timeout = 70_000;
+        request.timeout = 120_000;
         request.setRequestHeader("Content-Type", "application/json");
         request.upload.onprogress = (event) => {
           if (event.lengthComputable && event.total > 0) {
@@ -199,7 +200,7 @@ export default function Home() {
           resolve(response);
         };
         request.onerror = () => reject(new Error("Connection interrupted. Your photos are kept; reconnect and retry."));
-        request.ontimeout = () => reject(new Error("The request timed out. Your photos are kept; retry when your connection is stable."));
+        request.ontimeout = () => reject(new Error("This is taking longer than usual. Your photos are kept; please retry in a moment."));
         request.send(JSON.stringify({
           imagesBase64: images,
           userCountry,
@@ -400,32 +401,49 @@ export default function Home() {
                         isBuy ? "text-emerald-400" : "text-rose-400"
                       }`}
                     >
-                      {isBuy ? "BUY" : "AVOID"}
+                      {isBuy ? "GOOD CHOICE TO BUY" : ""}
                     </div>
                   </div>
 
                   {/* 2. REASON FOR VERDICT */}
-                  <div className="mt-3 pt-3 border-t border-slate-800/80 text-left">
-                    <div className="flex items-center justify-between mb-1.5">
+                  {isBuy && (
+                    <div className="mt-3 pt-3 border-t border-slate-800/80 text-left">
+                      <div className="flex items-center justify-between mb-1.5">
                       <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                        {isBuy ? "Why you should buy:" : "Why you should avoid:"}
+                        Why this is a good choice:
                       </h3>
                       {isIndia && result.primaryReasonHindi && (
                         <span className="text-[10px] text-amber-400/90 font-medium">
-                          {isBuy ? "यह उत्पाद क्यों खरीदें:" : "इस उत्पाद से क्यों बचें:"}
+                          यह अच्छा विकल्प खरीदने के लिए है:
                         </span>
                       )}
-                    </div>
-                    <p className="text-xs text-slate-200 leading-relaxed font-normal">
+                      </div>
+                      <p className="text-xs text-slate-200 leading-relaxed font-normal">
                       {result.primaryReason}
-                    </p>
-                    {isIndia && result.primaryReasonHindi && (
+                      </p>
+                      {isIndia && result.primaryReasonHindi && (
                       <p className="text-xs text-amber-200/90 mt-1 leading-relaxed border-t border-slate-800/50 pt-1">
                         {result.primaryReasonHindi}
                       </p>
-                    )}
-                  </div>
+                      )}
+                    </div>
+                  )}
                 </div>
+
+                {result.scoreBreakdown && (
+                  <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-4">
+                    <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-200">Score breakdown</h3>
+                    <div className="grid grid-cols-3 gap-2 text-xs text-slate-300">
+                      <p>Nutrition <span className="font-semibold text-white">{result.scoreBreakdown.nutrition}/60</span></p>
+                      <p>Ingredients <span className="font-semibold text-white">{result.scoreBreakdown.additives}/30</span></p>
+                      <p>Organic <span className="font-semibold text-white">{result.scoreBreakdown.organic}/10</span></p>
+                    </div>
+                    <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
+                      Additive deductions are a screening guide, not a medical assessment. This is a Yuka-inspired
+                      structure, not an official Yuka rating.
+                    </p>
+                  </div>
+                )}
 
                 {/* Regional Compliance & Regulatory Notes */}
                 {result.complianceNotes && (
@@ -453,6 +471,37 @@ export default function Home() {
                     )}
                   </div>
                 )}
+
+                <details className="rounded-3xl border border-slate-800 bg-slate-900/90 p-4">
+                  <summary className="cursor-pointer text-xs font-bold uppercase tracking-wider text-sky-300">
+                    Regulatory standards by market
+                  </summary>
+                  <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
+                    General references and photo-based observations only. This is not a legal compliance assessment;
+                    requirements depend on product type and the label images may not show all required information.
+                  </p>
+                  <div className="mt-3 flex flex-col gap-3">
+                    {MARKET_STANDARDS.map(({ name, framework, source }) => (
+                      <article key={name} className="border-t border-slate-800 pt-3">
+                        <div className="flex flex-wrap items-baseline justify-between gap-2">
+                          <h4 className="text-xs font-semibold text-slate-100">{name}</h4>
+                          <a
+                            href={source}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[10px] text-sky-300 underline underline-offset-2"
+                          >
+                            Official reference
+                          </a>
+                        </div>
+                        <p className="mt-1 text-[10px] text-slate-400">{framework}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-slate-300">
+                          {result.marketCompliance?.[name] || "Compliance cannot be determined from the label images."}
+                        </p>
+                      </article>
+                    ))}
+                  </div>
+                </details>
 
                 {/* Flagged Ingredients of Concern */}
                 {result.flaggedIngredients?.length > 0 && (
@@ -507,7 +556,7 @@ export default function Home() {
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                        {isBuy ? "Similar Top-Rated Choices" : "Healthier Alternatives"}
+                        {isBuy ? "Similar Top-Rated Choices" : "Similar Choices"}
                       </h3>
                       <p className="text-[10px] text-slate-400">Available in {userCountry} market</p>
                     </div>

@@ -20,14 +20,22 @@ type AlternativesProps = {
   verdict: 'BUY' | 'AVOID';
   /** This product's score, to show how many points better each alternative is. */
   score: number;
+  brandName?: string;
   marketName: string;
 };
 
-/** "Healthier alternatives" (AVOID) or "Similar top-rated choices" (BUY), with store links. */
-export function Alternatives({ items, verdict, score, marketName }: AlternativesProps) {
+/** "Similar choices" (AVOID) or "Similar top-rated choices" (BUY), with store links. */
+export function Alternatives({ items, verdict, score, brandName, marketName }: AlternativesProps) {
   const { spacing } = useTheme();
   const t = useStrings(resultStrings);
   const avoid = verdict === 'AVOID';
+  const visibleItems = avoid
+    ? items.filter((item) =>
+        item.estimatedScore !== null &&
+        item.estimatedScore > 60 &&
+        item.brand.trim().toLowerCase() !== (brandName ?? '').trim().toLowerCase()
+      )
+    : items;
 
   return (
     <View>
@@ -36,7 +44,7 @@ export function Alternatives({ items, verdict, score, marketName }: Alternatives
         subtitle={fmt(t.altSubtitle, { market: marketName })}
         icon={avoid ? 'trendingUp' : 'star'}
       />
-      {items.length === 0 ? (
+      {visibleItems.length === 0 ? (
         <Card>
           <AppText variant="bodyMedium" color="onSurfaceVariant">
             {t.altEmpty}
@@ -44,7 +52,7 @@ export function Alternatives({ items, verdict, score, marketName }: Alternatives
         </Card>
       ) : (
         <View style={{ gap: spacing.md }}>
-          {items.map((item, index) => (
+          {visibleItems.map((item, index) => (
             <AlternativeCard key={`${index}-${item.brand}-${item.productName}`} item={item} baseScore={score} />
           ))}
         </View>

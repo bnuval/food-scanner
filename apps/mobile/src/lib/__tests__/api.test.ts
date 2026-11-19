@@ -71,9 +71,9 @@ async function send(opts: Parameters<typeof analyzeLabel>[1] = {}) {
 }
 
 describe('analyzeLabel timeouts', () => {
-  it('gives the server 60 s when the upload reports nothing', async () => {
+  it('gives the server 90 s when the upload reports nothing', async () => {
     const call = await send();
-    await jest.advanceTimersByTimeAsync(59_999);
+    await jest.advanceTimersByTimeAsync(89_999);
     expect(call.outcome()).toBeNull();
     await jest.advanceTimersByTimeAsync(1);
     expect(call.outcome()).toBe('timeout');
@@ -88,7 +88,7 @@ describe('analyzeLabel timeouts', () => {
       call.xhr.progress(i / 8);
     }
     expect(call.outcome()).toBeNull();
-    await jest.advanceTimersByTimeAsync(59_999);
+    await jest.advanceTimersByTimeAsync(89_999);
     expect(call.outcome()).toBeNull();
     await jest.advanceTimersByTimeAsync(1);
     expect(call.outcome()).toBe('timeout');
@@ -98,15 +98,15 @@ describe('analyzeLabel timeouts', () => {
     const call = await send();
     await jest.advanceTimersByTimeAsync(20_000);
     call.xhr.progress(0.4);
-    await jest.advanceTimersByTimeAsync(59_999);
+    await jest.advanceTimersByTimeAsync(89_999);
     expect(call.outcome()).toBeNull();
     await jest.advanceTimersByTimeAsync(1);
     expect(call.outcome()).toBe('timeout');
   });
 
-  it('caps the whole call at 150 s however the upload trickles', async () => {
+  it('caps the whole call at 180 s however the upload trickles', async () => {
     const call = await send();
-    for (let elapsed = 5_000; elapsed < 150_000; elapsed += 5_000) {
+    for (let elapsed = 5_000; elapsed < 180_000; elapsed += 5_000) {
       await jest.advanceTimersByTimeAsync(5_000);
       call.xhr.progress(Math.min(0.99, elapsed / 200_000));
     }

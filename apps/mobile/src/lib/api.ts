@@ -21,9 +21,9 @@ const SEARCH_PATH = '/api/search-products';
  * Longest wait for the analysis once the upload has finished or stopped reporting progress.
  * Upload time doesn't count: every upload progress event pushes this deadline back.
  */
-const ANALYZE_SERVER_TIMEOUT_MS = 60_000;
+const ANALYZE_SERVER_TIMEOUT_MS = 90_000;
 /** Hard cap for the whole analyze call from send, however slowly the upload trickles. */
-const ANALYZE_MAX_MS = 150_000;
+const ANALYZE_MAX_MS = 180_000;
 const SEARCH_TIMEOUT_MS = 30_000;
 
 export type ApiErrorKind =

@@ -20,8 +20,8 @@ export const historyStrings = defineStrings({
     emptyTitle: 'No scans yet',
     emptyBody: 'Your scans are saved only on this device.',
     emptyAction: 'Scan a product',
-    filteredEmptyBuy: 'None of your scans got a “Buy” verdict yet.',
-    filteredEmptyAvoid: 'None of your scans got an “Avoid” verdict yet.',
+    filteredEmptyBuy: 'None of your scans got a “Good choice” result yet.',
+    filteredEmptyAvoid: 'None of your scans need an alternative suggestion yet.',
     showAll: 'Show all scans',
 
     loading: 'Loading your scan history',
@@ -57,7 +57,7 @@ export const historyStrings = defineStrings({
     emptyBody: 'आपके स्कैन सिर्फ़ इसी डिवाइस पर सेव होते हैं।',
     emptyAction: 'कोई प्रोडक्ट स्कैन करें',
     filteredEmptyBuy: 'अभी तक आपके किसी स्कैन को “खरीदें” का फ़ैसला नहीं मिला है।',
-    filteredEmptyAvoid: 'अभी तक आपके किसी स्कैन को “न खरीदें” का फ़ैसला नहीं मिला है।',
+    filteredEmptyAvoid: 'अभी तक किसी स्कैन में विकल्प देखने की जरूरत नहीं पड़ी।',
     showAll: 'सभी स्कैन दिखाएँ',
 
     loading: 'आपका स्कैन इतिहास लोड हो रहा है',
