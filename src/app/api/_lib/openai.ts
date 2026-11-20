@@ -1,31 +1,9 @@
-import type { GeminiPart } from "./gemini";
+import { toJsonSchema, type ExternalModelRequest } from "./model-schema";
 
 const API_URL = "https://api.openai.com/v1/responses";
 export const OPENAI_MODEL = "gpt-6.1-terra";
 
-type OpenAIRequest = {
-  apiKey: string;
-  systemInstruction: string;
-  parts: GeminiPart[];
-  responseSchema: object;
-  maxOutputTokens: number;
-  signal: AbortSignal;
-};
-
-function toOpenAIJsonSchema(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(toOpenAIJsonSchema);
-  if (value === null || typeof value !== "object") return value;
-
-  const source = value as Record<string, unknown>;
-  const schema: Record<string, unknown> = {};
-  for (const [key, child] of Object.entries(source)) {
-    schema[key] = key === "type" && typeof child === "string" ? child.toLowerCase() : toOpenAIJsonSchema(child);
-  }
-  if (source.type === "OBJECT") schema.additionalProperties = false;
-  return schema;
-}
-
-export async function generateOpenAIJson(opts: OpenAIRequest): Promise<unknown> {
+export async function generateOpenAIJson(opts: ExternalModelRequest): Promise<unknown> {
   const userContent = opts.parts.map((part) =>
     "text" in part
       ? { type: "input_text", text: part.text }
@@ -52,7 +30,7 @@ export async function generateOpenAIJson(opts: OpenAIRequest): Promise<unknown> 
           type: "json_schema",
           name: "label_analysis",
           strict: true,
-          schema: toOpenAIJsonSchema(opts.responseSchema),
+          schema: toJsonSchema(opts.responseSchema),
         },
       },
       max_output_tokens: opts.maxOutputTokens,

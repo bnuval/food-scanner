@@ -347,6 +347,12 @@ export default function Home() {
               </button>
             </div>
           )}
+          {images.length > 0 && !loading && (
+            <p className="mt-2 text-center text-[11px] leading-relaxed text-slate-400">
+              High traffic may occasionally cause a timeout. If it does, please try again—we’ll make another attempt.
+              Thank you for your patience.
+            </p>
+          )}
           {scanError && (
             <p role="alert" className="mt-3 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs leading-relaxed text-rose-200">
               {scanError}

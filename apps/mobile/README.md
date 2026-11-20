@@ -247,9 +247,10 @@ upload the new `.aab` to a testing track → promote to production.
 
 ## Security model
 
-- Gemini and optional OpenAI keys stay on the server; nothing in the app is secret (assume the
-  APK is decompiled). When `OPENAI_API_KEY` is configured, label photos are also sent to OpenAI
-  alongside Gemini for analysis; disclose both providers in the published privacy policy.
+- Gemini, OpenAI, and optional Groq keys stay on the server; nothing in the app is secret (assume
+  the APK is decompiled). When an external-provider key is configured, label photos are also sent
+  to that provider alongside Gemini for analysis; disclose all configured providers in the
+  published privacy policy.
 - Release builds allow **HTTPS only**; the build fails without an https API URL.
 - Permissions: `CAMERA`, `INTERNET`, `ACCESS_NETWORK_STATE` only. Storage, media, microphone,
   location, biometrics, overlay and vibrate permissions are explicitly blocked; backups are off.

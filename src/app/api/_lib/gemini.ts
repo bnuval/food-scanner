@@ -1,4 +1,6 @@
 import { generateOpenAIJson, OPENAI_MODEL } from "./openai";
+import { generateGroqJson, GROQ_MODEL } from "./groq";
+import type { ExternalModelRequest } from "./model-schema";
 
 // Gemini over its REST API (no SDK), with pinned models and a timeout per attempt.
 
@@ -29,7 +31,13 @@ type GenerateJsonOptions = {
   /** Return the first valid model result and cancel remaining requests. */
   raceModels?: boolean;
 };
-type ModelResult = { provider: "gemini" | "openai"; attempt: number; result: unknown };
+type ModelResult = { provider: "gemini" | "openai" | "groq"; attempt: number; result: unknown };
+type ExternalProvider = {
+  provider: "openai" | "groq";
+  model: string;
+  apiKey: string;
+  generate: (opts: ExternalModelRequest) => Promise<unknown>;
+};
 
 /**
  * Tries configured models sequentially or races them, depending on the route's cost/latency
@@ -109,55 +117,72 @@ export async function generateJson(opts: GenerateJsonOptions): Promise<unknown> 
 
   if (opts.raceModels) {
     const attempts: Array<Promise<ModelResult>> = models.map((_model, attempt) => attemptModel(attempt));
+    const externalProviders: ExternalProvider[] = [];
     const openAiApiKey = process.env.OPENAI_API_KEY?.trim();
-    const openAiController = openAiApiKey ? new AbortController() : null;
-    let openAiTimedOut = false;
-    const openAiTimeoutMs = opts.timeoutsMs.reduce((max, timeout) => Math.max(max, timeout), 0);
-    const openAiTimer = openAiController
-      ? setTimeout(() => {
-          openAiTimedOut = true;
-          openAiController.abort();
-        }, openAiTimeoutMs)
-      : null;
+    const groqApiKey = process.env.GROQ_API_KEY?.trim();
+    if (openAiApiKey) {
+      externalProviders.push({
+        provider: "openai",
+        model: OPENAI_MODEL,
+        apiKey: openAiApiKey,
+        generate: generateOpenAIJson,
+      });
+    }
+    if (groqApiKey) {
+      externalProviders.push({
+        provider: "groq",
+        model: GROQ_MODEL,
+        apiKey: groqApiKey,
+        generate: generateGroqJson,
+      });
+    }
 
-    if (openAiApiKey && openAiController) {
+    const externalControllers = externalProviders.map(() => new AbortController());
+    const externalTimeoutMs = opts.timeoutsMs.reduce((max, timeout) => Math.max(max, timeout), 0);
+    externalProviders.forEach((provider, attempt) => {
+      const controller = externalControllers[attempt];
+      let timedOut = false;
+      const timer = setTimeout(() => {
+        timedOut = true;
+        controller.abort();
+      }, externalTimeoutMs);
       const startedAt = Date.now();
       attempts.push(
-        generateOpenAIJson({
-          apiKey: openAiApiKey,
+        provider.generate({
+          apiKey: provider.apiKey,
           systemInstruction: opts.systemInstruction,
           parts: opts.parts,
           responseSchema: opts.responseSchema,
           maxOutputTokens: opts.maxOutputTokens ?? MAX_OUTPUT_TOKENS,
-          signal: openAiController.signal,
+          signal: controller.signal,
         })
-          .then((result): ModelResult => ({ provider: "openai", attempt: -1, result }))
+          .then((result): ModelResult => ({ provider: provider.provider, attempt, result }))
           .catch((error: unknown) => {
-            if (!openAiController.signal.aborted || openAiTimedOut) {
+            if (!controller.signal.aborted || timedOut) {
               const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
               console.error(
-                `[openai] ${opts.label} ${opts.requestId}: ${OPENAI_MODEL} failed after ${Date.now() - startedAt}ms: ${detail}`
+                `[${provider.provider}] ${opts.label} ${opts.requestId}: ${provider.model} failed after ${Date.now() - startedAt}ms: ${detail}`
               );
             }
             throw error;
           })
-          .finally(() => {
-            if (openAiTimer) clearTimeout(openAiTimer);
-          })
+          .finally(() => clearTimeout(timer))
       );
-    }
+    });
 
     try {
       const winner = await Promise.any(attempts);
       controllers.forEach((controller, attempt) => {
         if (winner.provider !== "gemini" || attempt !== winner.attempt) controller.abort();
       });
-      if (winner.provider !== "openai") openAiController?.abort();
+      externalControllers.forEach((controller, attempt) => {
+        if (winner.provider !== externalProviders[attempt].provider || attempt !== winner.attempt) {
+          controller.abort();
+        }
+      });
       return winner.result;
     } catch (error) {
       throw new Error("All AI attempts failed", { cause: error });
-    } finally {
-      if (openAiTimer) clearTimeout(openAiTimer);
     }
   }
 

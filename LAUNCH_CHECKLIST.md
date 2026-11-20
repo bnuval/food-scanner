@@ -6,8 +6,8 @@ published. Tick items off in a PR or copy the list into an issue.
 ## 1. Backend
 
 The public API has no request rate limits, including failed admin login attempts. Analyze races
-up to three Gemini models and, when configured, OpenAI in parallel (losing requests may still
-incur charges); search tries two Gemini models sequentially. Configure strict Gemini/OpenAI
+up to three Gemini models and, when configured, OpenAI and Groq in parallel (losing requests may
+still incur charges); search tries two Gemini models sequentially. Configure strict provider
 quotas and billing alerts, and use a strong unique admin password, before sharing the production URL.
 
 - [ ] **Initialize admin access** with a salted scrypt password hash in the private JSONBin record
@@ -25,6 +25,10 @@ quotas and billing alerts, and use a strong unique admin password, before sharin
         `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL`, and/or `GEMINI_LAST_RESORT_MODEL`.
   - [ ] **OpenAI fallback:** configure `OPENAI_API_KEY` on the server if you want the independent
         provider fallback; set a budget alert and verify `gpt-6.1-terra` access.
+  - [ ] **Groq fallback:** configure `GROQ_API_KEY` on the server if you want the additional
+        independent provider fallback; set a budget alert and verify access to the default
+        vision model `qwen/qwen3.8-27b` (currently preview), or set `GROQ_MODEL` to an available
+        vision model that supports JSON-schema output.
 - [ ] **Redeploy**, then make sure the production URL is public: Vercel *Deployment Protection*
       must not apply to the production domain (the current `*.vercel.app` deployments ask for a
       Vercel login, which blocks the app). A **custom domain** is strongly recommended because it
@@ -44,7 +48,7 @@ quotas and billing alerts, and use a strong unique admin password, before sharin
       `com.yourcompany.purebite`.
 - [ ] **Privacy policy** published at a public https URL (not geo-blocked). It must cover: label
       photos and search queries sent to your server and label photos sent to Google Gemini and,
-      when configured, OpenAI for analysis; provider data handling; aggregate web page-view
+      when configured, OpenAI and Groq for analysis; provider data handling; aggregate web page-view
       analytics; scan history kept only on the device; no ads, no data sale; contact address.
 - [ ] **Terms of use** URL (recommended) and a **support email** — the email powers the in-app
       "Report a problem with this result" action, which Google Play expects for AI-generated
