@@ -41,6 +41,7 @@ export function RunningState({ photos, timing, finished }: Props) {
   const snapshot = holdProgress(shown, estimate);
   if (snapshot !== shown) setShown(snapshot);
   const stages = [t.stageUpload, t.stageRead, t.stageCheck, t.stageAlternatives];
+  const stageDetails = [t.stageDetailUpload, t.stageDetailRead, t.stageDetailCheck, t.stageDetailAlternatives];
   const headline = finished ? t.stageDone : fmt(t.stageHeadline, { stage: stages[snapshot.stage] ?? t.stageUpload });
 
   return (
@@ -50,9 +51,14 @@ export function RunningState({ photos, timing, finished }: Props) {
           {headline}
         </AppText>
         {finished ? null : (
-          <AppText variant="bodyMedium" color="onSurfaceVariant" accessibilityLiveRegion="polite">
-            {snapshot.slow ? t.slow : t.typicalTime}
-          </AppText>
+          <>
+            <AppText variant="bodyMedium" color="onSurfaceVariant">
+              {snapshot.slow ? t.slow : t.typicalTime}
+            </AppText>
+            <AppText variant="bodySmall" color="onSurfaceVariant" accessibilityLiveRegion="polite">
+              {stageDetails[snapshot.stage] ?? t.stageDetailAlternatives}
+            </AppText>
+          </>
         )}
       </View>
       <ScanningThumbnails photos={photos} />

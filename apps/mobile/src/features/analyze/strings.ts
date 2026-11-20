@@ -12,8 +12,13 @@ export const analyzeStrings = defineStrings({
     stageAlternatives: 'Finding better alternatives',
     stageDone: 'Result ready',
     stageHeadline: '{stage}…',
-    typicalTime: 'This usually takes 5–20 seconds. Please keep the app open.',
-    slow: 'This is taking longer than usual. We’re still working on it…',
+    typicalTime:
+      'Please be patient—our AI is reviewing your product label and preparing its details and suggestions. This may take a little while.',
+    slow: 'The AI review is taking a little longer, but it’s still in progress. We’re preparing your results…',
+    stageDetailUpload: 'Sending your photos securely for review.',
+    stageDetailRead: 'Reading the visible product name, ingredients, and nutrition details.',
+    stageDetailCheck: 'Checking the label details to prepare a helpful summary.',
+    stageDetailAlternatives: 'Putting together product details and suggestions.',
 
     progressLabel: 'Analysis progress',
     percent: '{percent}%',
@@ -59,8 +64,13 @@ export const analyzeStrings = defineStrings({
     stageAlternatives: 'बेहतर विकल्प खोजे जा रहे हैं',
     stageDone: 'नतीजा तैयार है',
     stageHeadline: '{stage}…',
-    typicalTime: 'इसमें आमतौर पर 5–20 सेकंड लगते हैं। कृपया ऐप खुला रखें।',
-    slow: 'सामान्य से ज़्यादा समय लग रहा है। हम अभी भी इस पर काम कर रहे हैं…',
+    typicalTime:
+      'कृपया धैर्य रखें—हमारा AI आपके उत्पाद के लेबल की जाँच करके उसकी जानकारी और सुझाव तैयार कर रहा है। इसमें थोड़ा समय लग सकता है।',
+    slow: 'AI की जाँच में थोड़ा अधिक समय लग रहा है, लेकिन यह जारी है। हम आपके नतीजे तैयार कर रहे हैं…',
+    stageDetailUpload: 'आपकी फ़ोटो जाँच के लिए भेजी जा रही हैं।',
+    stageDetailRead: 'उत्पाद का नाम, सामग्री और पोषण संबंधी जानकारी पढ़ी जा रही है।',
+    stageDetailCheck: 'उपयोगी सारांश तैयार करने के लिए लेबल की जानकारी जाँची जा रही है।',
+    stageDetailAlternatives: 'उत्पाद की जानकारी और सुझाव तैयार किए जा रहे हैं।',
 
     progressLabel: 'विश्लेषण की प्रगति',
     percent: '{percent}%',

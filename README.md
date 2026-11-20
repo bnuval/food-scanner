@@ -8,13 +8,14 @@ This repository contains two apps that share one backend:
 
 | | Where | Stack |
 |---|---|---|
-| **Web app + API** | repository root (`src/`) | Next.js 14, React 18, Tailwind, Google Gemini (REST) |
+| **Web app + API** | repository root (`src/`) | Next.js 14, React 18, Tailwind, Google Gemini and optional OpenAI fallback (REST) |
 | **Android app** (iOS later) | [`apps/mobile`](apps/mobile/README.md) | Expo SDK 58, React Native 0.88, TypeScript |
 
 > **Before publishing anything, work through [LAUNCH_CHECKLIST.md](LAUNCH_CHECKLIST.md).**
-> The public API has no request rate limits. Configure Gemini API quotas and billing alerts
-> before exposing it publicly. Analyze and search try both Gemini models in parallel, which can
-> incur charges for both requests.
+> The public API has no request rate limits. Configure Gemini and OpenAI quotas and billing
+> alerts before exposing it publicly. Analyze races up to three Gemini models and, when
+> configured, OpenAI in parallel; search tries two Gemini models sequentially. Parallel
+> requests can incur charges for every provider, including losing attempts.
 
 ## Features
 
@@ -50,8 +51,10 @@ and dark themes, full English/Hindi UI, TalkBack support. See the
 ## API
 
 All routes are `POST` with JSON bodies. Analyze and search requests are validated with zod, but
-the public API has no rate limits; each successful request can incur Gemini API cost, and
-parallel model failover can charge for both model attempts.
+the public API has no rate limits. Analyze runs up to three Gemini requests and, when configured,
+one OpenAI request in parallel; losing requests may still incur charges. Search tries its two
+Gemini models sequentially and can incur charges for multiple completed attempts. When
+`OPENAI_API_KEY` is configured, label photos are also sent to OpenAI for the parallel fallback.
 Admin password attempts are also unlimited, so use a strong, unique password.
 
 | Route | Body |
@@ -70,11 +73,13 @@ Requirements: Node.js 20+ and npm.
 ```bash
 npm ci
 echo "GEMINI_API_KEY=your-gemini-api-key" > .env.local
+# Optional cross-provider analysis fallback:
+# OPENAI_API_KEY=your-openai-api-key
 npm run dev               # http://localhost:3000
 ```
 
-The key above is enough to try scanning and search. `npm run lint` and `npm run build` must pass
-before you push.
+The Gemini key is enough to try scanning and search. Add `OPENAI_API_KEY` to enable the
+independent-provider analysis fallback. `npm run lint` and `npm run build` must pass before you push.
 
 ## Environment variables
 
@@ -84,8 +89,9 @@ Netlify → Site configuration → Environment variables). None of them belong i
 | Variable | Required in production | Purpose |
 |---|---|---|
 | `GEMINI_API_KEY` | yes | Google Gemini API key (server-side only) |
+| `OPENAI_API_KEY` | no (needed for cross-provider analysis fallback) | OpenAI API key (server-side only). When configured, label photos are sent to OpenAI alongside Gemini for analysis. |
 | `JSONBIN_API_KEY` + `JSONBIN_BIN_ID` | yes, for analytics and `/admin` | Server-only JSONBin credentials for page-view counters and the admin password hash. |
-| `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | no | Override the parallel fast-model attempts (`gemini-3.5-flash-lite` and `gemini-3.1-flash-lite`). |
+| `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL`, `GEMINI_LAST_RESORT_MODEL` | no | Override the model pool (`gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3.8-flash`). Analysis races all three; search tries the first two sequentially. |
 
 The `/admin` password is verified against a salted scrypt hash in the private JSONBin record; it
 is never stored there as readable text. Add an `adminPasswordHash` property to the analytics bin.

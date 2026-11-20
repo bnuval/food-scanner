@@ -5,10 +5,10 @@ published. Tick items off in a PR or copy the list into an issue.
 
 ## 1. Backend
 
-The public API has no request rate limits, including failed admin login attempts. Analyze and
-search try both Gemini models in parallel, so one user request can incur charges for both model
-attempts. Configure strict Gemini quotas and billing alerts, and use a strong unique
-admin password, before sharing the production URL.
+The public API has no request rate limits, including failed admin login attempts. Analyze races
+up to three Gemini models and, when configured, OpenAI in parallel (losing requests may still
+incur charges); search tries two Gemini models sequentially. Configure strict Gemini/OpenAI
+quotas and billing alerts, and use a strong unique admin password, before sharing the production URL.
 
 - [ ] **Initialize admin access** with a salted scrypt password hash in the private JSONBin record
       (`adminPasswordHash`); configure `JSONBIN_API_KEY` and `JSONBIN_BIN_ID` as server-side
@@ -20,8 +20,11 @@ admin password, before sharing the production URL.
         EEA, UK or Switzerland).
   - [ ] Restrict the key to the Generative Language API in Google Cloud.
   - [ ] Add a **budget alert** and a per-day quota in Google Cloud.
-  - [ ] Confirm the pinned models (`gemini-3.5-flash-lite`, fallback `gemini-3.1-flash-lite`) are enabled
-        for your key; otherwise set `GEMINI_MODEL` / `GEMINI_FALLBACK_MODEL`.
+  - [ ] Confirm the pinned models (`gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, and
+        last-resort `gemini-3.8-flash`) are enabled for your key; otherwise set
+        `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL`, and/or `GEMINI_LAST_RESORT_MODEL`.
+  - [ ] **OpenAI fallback:** configure `OPENAI_API_KEY` on the server if you want the independent
+        provider fallback; set a budget alert and verify `gpt-6.1-terra` access.
 - [ ] **Redeploy**, then make sure the production URL is public: Vercel *Deployment Protection*
       must not apply to the production domain (the current `*.vercel.app` deployments ask for a
       Vercel login, which blocks the app). A **custom domain** is strongly recommended because it
@@ -40,9 +43,9 @@ admin password, before sharing the production URL.
       and can never change after the first Play upload. Use a domain you control, e.g.
       `com.yourcompany.purebite`.
 - [ ] **Privacy policy** published at a public https URL (not geo-blocked). It must cover: label
-      photos and search queries sent to your server and to Google Gemini for analysis and not
-      stored; aggregate web page-view analytics; scan history kept only on the device; no ads,
-      no data sale; contact address.
+      photos and search queries sent to your server and label photos sent to Google Gemini and,
+      when configured, OpenAI for analysis; provider data handling; aggregate web page-view
+      analytics; scan history kept only on the device; no ads, no data sale; contact address.
 - [ ] **Terms of use** URL (recommended) and a **support email** — the email powers the in-app
       "Report a problem with this result" action, which Google Play expects for AI-generated
       content.
@@ -72,7 +75,8 @@ admin password, before sharing the production URL.
   - [ ] **Health apps declaration**: Health & fitness → Nutrition and weight management; the app
         does not provide medical diagnosis or treatment.
   - [ ] **Data safety** (adjust to your final privacy policy):
-        Photos — collected, processed ephemerally, required for app functionality, not shared;
+        Photos — processed by the configured AI providers for app functionality; describe provider
+        sharing and retention accurately;
         App activity (in-app search and aggregate web page views) — collected, app functionality;
         encrypted in transit: yes; no data sold; no data used for ads.
   - [ ] Government app / financial features / news app: no.

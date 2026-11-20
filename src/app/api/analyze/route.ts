@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const ATTEMPT_TIMEOUTS_MS: [number, number] = [25_000, 20_000];
+const ATTEMPT_TIMEOUTS_MS: [number, number, number] = [50_000, 50_000, 50_000];
 const MAX_ANALYSIS_OUTPUT_TOKENS = 3072;
 const BUY_THRESHOLD = 60;
 
@@ -187,6 +187,7 @@ Assess all submitted images together. They may show different sides of the same 
       responseSchema: RESPONSE_SCHEMA,
       maxOutputTokens: MAX_ANALYSIS_OUTPUT_TOKENS,
       timeoutsMs: ATTEMPT_TIMEOUTS_MS,
+      raceModels: true,
     });
 
     const parsedResult = ModelAnalysisSchema.safeParse(result);

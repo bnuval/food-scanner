@@ -332,7 +332,7 @@ export default function Home() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
                     </svg>
-                    <span>{uploadProgress < 100 ? `Uploading photos ${uploadProgress}%...` : "Analyzing label..."}</span>
+                    <span>{uploadProgress < 100 ? `Uploading photos ${uploadProgress}%...` : "AI reviewing label..."}</span>
                   </>
                 ) : (
                   <span>Evaluate Health Verdict</span>
@@ -356,11 +356,30 @@ export default function Home() {
 
         {/* Loading Skeleton */}
         {loading && (
-          <div className="bg-slate-900/80 rounded-3xl p-5 border border-slate-800 animate-pulse flex flex-col gap-3">
-            <div className="h-20 bg-slate-800 rounded-2xl"></div>
-            <div className="h-16 bg-slate-800/60 rounded-2xl"></div>
-            <div className="h-28 bg-slate-800/40 rounded-2xl"></div>
-          </div>
+          <>
+            <div role="status" aria-live="polite" className="rounded-3xl border border-emerald-500/20 bg-slate-900/90 p-5">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 border-emerald-400/30 border-t-emerald-400 animate-spin" aria-hidden="true"></div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Our AI is reviewing your product</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-slate-300">
+                    Please be patient—our AI is checking your label and preparing product details and suggestions. This may take a little while.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 grid gap-2 border-t border-slate-800 pt-3 text-xs text-slate-300 sm:grid-cols-3">
+                <span>Reading the product label</span>
+                <span>Checking ingredients and nutrition</span>
+                <span>Preparing your summary and suggestions</span>
+              </div>
+              <p className="mt-3 text-[11px] text-slate-500">Keep this screen open while the review runs.</p>
+            </div>
+            <div className="bg-slate-900/80 rounded-3xl p-5 border border-slate-800 animate-pulse flex flex-col gap-3" aria-hidden="true">
+              <div className="h-20 bg-slate-800 rounded-2xl"></div>
+              <div className="h-16 bg-slate-800/60 rounded-2xl"></div>
+              <div className="h-28 bg-slate-800/40 rounded-2xl"></div>
+            </div>
+          </>
         )}
 
         {/* Results Screen */}
