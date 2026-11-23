@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import NextImage from "next/image";
 import { MARKET_STANDARDS } from "./market-standards";
 
 const ANALYSIS_CACHE_PREFIX = "purebite:analysis:v4:";
@@ -285,13 +286,15 @@ export default function Home() {
             </div>
           ) : (
             <div className="py-6 px-3 text-center flex flex-col items-center">
-              <div className="relative w-24 h-24 rounded-2xl overflow-hidden shadow-lg border border-slate-700/80 mb-4 group">
-                <img
-                  src="https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=400&q=80"
-                  alt="Fresh wholesome food"
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              <div className="relative w-full aspect-video rounded-2xl overflow-hidden shadow-lg border border-slate-700/80 mb-4 group bg-white">
+                <NextImage
+                  src="/purebite-home-hero.png"
+                  alt="PureBite AI scanning food and cosmetic labels"
+                  fill
+                  priority
+                  sizes="(max-width: 448px) calc(100vw - 88px), 384px"
+                  className="object-contain group-hover:scale-105 transition-transform duration-300"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 to-transparent"></div>
               </div>
 
               <h2 className="text-base font-bold text-white tracking-tight">Scan Food Package</h2>
