@@ -14,6 +14,19 @@ z.config({ jitless: true });
 
 export const BUY_THRESHOLD = 60;
 export const MAX_PHOTOS = 3;
+export const HEALTH_VERDICTS = ['Must Buy', 'Recommended Buy', 'Okay to Buy', 'Avoid Frequent Use'] as const;
+export type HealthVerdict = (typeof HEALTH_VERDICTS)[number];
+
+export function healthVerdictForScore(score: number): HealthVerdict {
+  if (score >= 85) return 'Must Buy';
+  if (score >= 75) return 'Recommended Buy';
+  if (score >= 60) return 'Okay to Buy';
+  return 'Avoid Frequent Use';
+}
+
+function binaryVerdictForScore(score: number): 'BUY' | 'AVOID' {
+  return score >= BUY_THRESHOLD ? 'BUY' : 'AVOID';
+}
 
 // Every field helper starts from `z.unknown().optional()`: in zod 4 a bare `z.unknown()`
 // object key still rejects a *missing* key, and the backend omits optional fields.
@@ -100,7 +113,49 @@ const scoreBreakdown = z.unknown().optional().transform((value) => {
     : { nutrition, additives, organic };
 });
 
-export const AnalysisResultSchema = z
+const HealthAnalysisResponseSchema = z
+  .object({
+    productName: z.string().trim().min(1).max(120),
+    category: z.enum(['Food', 'Cosmetics', 'Personal Care']),
+    score: z.number().int().min(0).max(100),
+    verdict: z.enum(HEALTH_VERDICTS),
+    harmfulIngredients: z
+      .array(
+        z
+          .object({
+            name: z.string().trim().min(1).max(100),
+            risk: z.string().trim().min(1).max(400),
+          })
+          .strict(),
+      )
+      .max(50),
+    positives: z.array(z.string().trim().min(1).max(160)).max(10),
+    summary: z.string().trim().min(1).max(600),
+  })
+  .strict()
+  .transform(({ productName, category, score, harmfulIngredients, positives, summary }) => ({
+    isReadable: productName !== 'Unknown Product',
+    productName,
+    brandName: '',
+    category,
+    healthScore: score,
+    scoreBreakdown: null,
+    verdict: binaryVerdictForScore(score),
+    tierVerdict: healthVerdictForScore(score),
+    primaryReason: summary,
+    primaryReasonHindi: '',
+    complianceNotes: '',
+    complianceNotesHindi: '',
+    flaggedIngredients: harmfulIngredients.map(({ name, risk }) => ({
+      name,
+      concern: risk,
+      concernHindi: '',
+    })),
+    positiveHighlights: positives,
+    alternatives: [],
+  }));
+
+const LegacyAnalysisResultSchema = z
   .object({
     isReadable: z
       .unknown()
@@ -116,16 +171,36 @@ export const AnalysisResultSchema = z
     primaryReasonHindi: text(900),
     complianceNotes: text(800),
     complianceNotesHindi: text(1200),
+    marketCompliance: z.unknown().optional(),
     flaggedIngredients: list(FlaggedIngredientSchema, 15),
     positiveHighlights: list(text(80).refine((s) => s.length > 0), 10),
     alternatives: list(AlternativeSchema, 5),
+    tierVerdict: z.enum(HEALTH_VERDICTS).optional(),
   })
+  .strict()
   .transform((r) => {
     const healthScore = r.healthScore ?? 0;
     // The score is the source of truth; the verdict must agree with it.
     const verdict: 'BUY' | 'AVOID' = healthScore >= BUY_THRESHOLD ? 'BUY' : 'AVOID';
-    return { ...r, isReadable: r.isReadable && r.healthScore !== null, healthScore, verdict };
+    return {
+      isReadable: r.isReadable && r.healthScore !== null,
+      productName: r.productName,
+      brandName: r.brandName,
+      category: r.category,
+      healthScore,
+      scoreBreakdown: r.scoreBreakdown,
+      verdict,
+      tierVerdict: healthVerdictForScore(healthScore),
+      primaryReason: r.primaryReason,
+      primaryReasonHindi: r.primaryReasonHindi,
+      complianceNotes: r.complianceNotes,
+      complianceNotesHindi: r.complianceNotesHindi,
+      flaggedIngredients: r.flaggedIngredients,
+      positiveHighlights: r.positiveHighlights,
+      alternatives: r.alternatives,
+    };
   });
+export const AnalysisResultSchema = z.union([HealthAnalysisResponseSchema, LegacyAnalysisResultSchema]);
 export type AnalysisResult = z.output<typeof AnalysisResultSchema>;
 export type FlaggedIngredient = AnalysisResult['flaggedIngredients'][number];
 export type Alternative = AnalysisResult['alternatives'][number];
@@ -163,11 +238,11 @@ export type Product = SearchResponse['products'][number];
 
 // ---------- Score bands ----------
 
-export type ScoreBand = 'excellent' | 'good' | 'poor' | 'bad';
+export type ScoreBand = 'excellent' | 'good' | 'okay' | 'bad';
 
 export function scoreBand(value: number): ScoreBand {
-  if (value >= 80) return 'excellent';
-  if (value >= BUY_THRESHOLD) return 'good';
-  if (value >= 40) return 'poor';
+  if (value >= 85) return 'excellent';
+  if (value >= 75) return 'good';
+  if (value >= 60) return 'okay';
   return 'bad';
 }

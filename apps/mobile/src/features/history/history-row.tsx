@@ -12,6 +12,7 @@ import { fmt, useStrings } from '@/i18n';
 import { common } from '@/i18n/common';
 import { haptic } from '@/lib/haptics';
 import type { ScanSummary } from '@/lib/history';
+import { healthVerdictForScore } from '@/shared/api-schema';
 import { useSettings } from '@/state/settings';
 import { MAX_CONTENT_WIDTH, MIN_TOUCH, useTheme } from '@/theme';
 
@@ -50,7 +51,14 @@ export function HistoryRow({ scan, onOpen, onDelete, onConfirmDelete, today }: H
   const name = scan.productName.trim() || t.untitled;
   const brand = scan.brand.trim();
   const date = formatScanDate(scan.createdAt, lang, t, today);
-  const verdict = scan.verdict === 'BUY' ? tc.verdictBuy : tc.verdictAvoid;
+  const tierVerdict = healthVerdictForScore(scan.score);
+  const verdict = tierVerdict === 'Must Buy'
+    ? tc.verdictMustBuy
+    : tierVerdict === 'Recommended Buy'
+      ? tc.verdictRecommendedBuy
+      : tierVerdict === 'Okay to Buy'
+        ? tc.verdictOkayToBuy
+        : tc.verdictAvoidFrequentUse;
   const a11yLabel = [
     name,
     brand,
@@ -112,7 +120,7 @@ export function HistoryRow({ scan, onOpen, onDelete, onConfirmDelete, today }: H
               importantForAccessibility="no-hide-descendants"
               style={[styles.meta, { gap: spacing.sm, marginTop: spacing.xs }]}>
               <ScoreBadge score={scan.score} />
-              <VerdictPill verdict={scan.verdict} size="small" />
+              <VerdictPill verdict={scan.verdict} tierVerdict={tierVerdict} size="small" />
               <AppText variant="bodySmall" color="onSurfaceVariant" style={styles.date}>
                 {date}
               </AppText>

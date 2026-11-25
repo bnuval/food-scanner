@@ -54,7 +54,7 @@ export const lightColors = {
 
   bandExcellent: '#1E7A46',
   bandGood: '#3F7A1E',
-  bandPoor: '#B05A00',
+  bandOkay: '#B05A00',
   bandBad: '#A8231B',
 } as const;
 
@@ -110,7 +110,7 @@ export const darkColors: Colors = {
 
   bandExcellent: '#7BDB9C',
   bandGood: '#B4D98B',
-  bandPoor: '#FFB86E',
+  bandOkay: '#FFB86E',
   bandBad: '#FFB4A8',
 };
 

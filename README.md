@@ -1,8 +1,8 @@
 # PureBite AI
 
-Photograph a food label and get an instant health score, a **BUY / AVOID** verdict, the
-ingredients to worry about and healthier alternatives you can buy locally — plus a search for
-clean food and cosmetics. Explanations are in English, and also in Hindi for the India market.
+Photograph a food, cosmetics, or personal-care label and get a health score, a four-tier verdict,
+ingredients of concern, and clean-label positives — plus a search for clean food and cosmetics.
+Analysis summaries are in English; the mobile interface supports English and Hindi.
 
 This repository contains two apps that share one backend:
 
@@ -20,18 +20,17 @@ This repository contains two apps that share one backend:
 ## Features
 
 **Package scanner** — up to 3 photos (ingredient list, nutrition table, front/barcode) are
-scored on a 0–100 scale using a Yuka-inspired 3-pillar structure (nutrition 60 points,
-ingredients/additives 30, certified organic 10). The API sums the component scores; it applies
-fixed, deduplicated additive deductions (high 10, moderate 5, limited 2) and a 10-point caution
-deduction for each identified E102, E110 or E124 colour, up to the 30-point pillar limit. This is
-an independent screening rubric, not Yuka's proprietary rating or a medical assessment. The app
-derives the verdict from the score: BUY at 65 or above, AVOID below 65. The result shows the
-component breakdown, main
-reason, flagged ingredients, positive highlights, country-specific regulatory notes and 2–3
-better alternatives with store links. On the web, a "Regulatory standards by market" disclosure
-compares label observations across India, the United States, the United Kingdom, the European
-Union, Australia and the UAE, with links to general official references. These observations are
-not a legal compliance assessment.
+assessed on a 0–100 scale. Verdicts are derived from the score: **Must Buy** (85–100),
+**Recommended Buy** (75–84), **Okay to Buy** (60–74), and **Avoid Frequent Use** (below 60).
+Food assessments consider processing, refined sugars, palm/palmolein and hydrogenated fats,
+artificial colours, synthetic preservatives, emulsifiers, sodium, and the overall ingredient and
+nutrition profile. Cosmetics and personal-care assessments consider credible ingredient concerns
+relevant to those products. The API returns strict JSON with product name, category, score, verdict,
+harmful ingredients and their risks, positives, and a short recommendation. This is an independent
+AI estimate for general information, not medical advice; only visible label information is assessed.
+On the web, a "Regulatory standards by market" disclosure shows general references for India, the
+United States, the United Kingdom, the European Union, Australia and the UAE. It is not a legal
+compliance assessment.
 On the web, an identical compressed photo set in the same market reuses its saved result in that
 browser for up to 30 days; only the analysis result and a photo hash are cached, not the photo.
 

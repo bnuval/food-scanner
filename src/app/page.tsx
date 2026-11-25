@@ -5,10 +5,9 @@ import Link from "next/link";
 import NextImage from "next/image";
 import { MARKET_STANDARDS } from "./market-standards";
 
-const ANALYSIS_CACHE_PREFIX = "purebite:analysis:v4:";
+const ANALYSIS_CACHE_PREFIX = "purebite:analysis:v5:";
 const ANALYSIS_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_CACHED_ANALYSES = 40;
-const BUY_THRESHOLD = 60;
 
 type CachedAnalysis = { expiresAt: number; result: unknown };
 
@@ -217,9 +216,8 @@ export default function Home() {
     }
   };
 
-  const isBuy = typeof result?.healthScore === "number"
-    ? result.healthScore >= BUY_THRESHOLD
-    : result?.verdict === "BUY";
+  const isPositiveVerdict = result?.verdict === "Must Buy" || result?.verdict === "Recommended Buy";
+  const isOkayVerdict = result?.verdict === "Okay to Buy";
   const isIndia = userCountry === "India";
 
   return (
@@ -232,7 +230,7 @@ export default function Home() {
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
               <h1 className="text-xl font-extrabold tracking-tight text-white">PureBite AI</h1>
             </div>
-            <p className="text-[11px] text-slate-400 font-medium">Instant Health Verdict & Local Alternatives</p>
+            <p className="text-[11px] text-slate-400 font-medium">Health-calibrated label analysis</p>
           </div>
           <div className="flex items-center gap-1.5 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded-full">
             <span className="text-[10px] text-slate-400 font-medium">Market:</span>
@@ -297,9 +295,9 @@ export default function Home() {
                 />
               </div>
 
-              <h2 className="text-base font-bold text-white tracking-tight">Scan Food Package</h2>
+              <h2 className="text-base font-bold text-white tracking-tight">Scan a Product Label</h2>
               <p className="text-xs text-slate-300 mt-2 max-w-[280px] leading-relaxed">
-                Take a new picture or choose existing photos of the <span className="font-semibold text-emerald-400">ingredient list</span>, <span className="font-semibold text-emerald-400">nutrition table</span>, or <span className="font-semibold text-emerald-400">QR code / barcode</span> from your device gallery.
+                Take a new picture or choose existing photos of the <span className="font-semibold text-emerald-400">ingredient list</span>, <span className="font-semibold text-emerald-400">product front</span>, or <span className="font-semibold text-emerald-400">QR code / barcode</span> from your device gallery.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-2.5 w-full mt-5">
@@ -372,14 +370,14 @@ export default function Home() {
                 <div>
                   <h3 className="text-sm font-bold text-white">Our AI is reviewing your product</h3>
                   <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                    Please be patient—our AI is checking your label and preparing product details and suggestions. This may take a little while.
+                    Please be patient—our AI is checking the label and preparing a health score and ingredient summary. This may take a little while.
                   </p>
                 </div>
               </div>
               <div className="mt-4 grid gap-2 border-t border-slate-800 pt-3 text-xs text-slate-300 sm:grid-cols-3">
                 <span>Reading the product label</span>
-                <span>Checking ingredients and nutrition</span>
-                <span>Preparing your summary and suggestions</span>
+                <span>Reviewing ingredients and label details</span>
+                <span>Preparing your score and recommendation</span>
               </div>
               <p className="mt-3 text-[11px] text-slate-500">Keep this screen open while the review runs.</p>
             </div>
@@ -399,11 +397,11 @@ export default function Home() {
                 Showing the saved analysis for this photo in this browser.
               </p>
             )}
-            {!result.isReadable ? (
+            {result.productName === "Unknown Product" && result.score === 0 ? (
               <div className="p-5 bg-amber-500/10 border border-amber-500/30 rounded-3xl text-center">
                 <h3 className="text-sm font-bold text-amber-400">Photo Not Legible</h3>
                 <p className="text-xs text-amber-200/80 mt-1 leading-relaxed">
-                  {result.primaryReason || "The label text is blurred or reflective. Retake with steady lighting."}
+                  {result.summary || "The label text is blurred or reflective. Retake with steady lighting."}
                 </p>
               </div>
             ) : (
@@ -411,94 +409,39 @@ export default function Home() {
                 {/* 1. HERO VERDICT BADGE */}
                 <div
                   className={`p-6 rounded-3xl border text-center shadow-2xl transition-all ${
-                    isBuy
+                    isPositiveVerdict
                       ? "bg-gradient-to-b from-emerald-950/80 to-slate-900 border-emerald-500/40"
-                      : "bg-gradient-to-b from-rose-950/80 to-slate-900 border-rose-500/40"
+                      : isOkayVerdict
+                        ? "bg-gradient-to-b from-amber-950/80 to-slate-900 border-amber-500/40"
+                        : "bg-gradient-to-b from-rose-950/80 to-slate-900 border-rose-500/40"
                   }`}
                 >
                   <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">
-                    <span className="truncate max-w-[200px]">{result.brandName || result.productName || "Scanned Product"}</span>
+                    <span className="truncate max-w-[200px]">{result.productName || "Scanned Product"} · {result.category}</span>
                     <span className="font-mono bg-slate-800/90 px-2.5 py-0.5 rounded-full border border-slate-700 text-white">
-                      Score: {result.healthScore}/100
+                      Score: {result.score}/100
                     </span>
                   </div>
 
                   <div className="my-2">
                     <div
                       className={`inline-block text-4xl sm:text-5xl font-black tracking-tight uppercase ${
-                        isBuy ? "text-emerald-400" : "text-rose-400"
+                        isPositiveVerdict ? "text-emerald-400" : isOkayVerdict ? "text-amber-400" : "text-rose-400"
                       }`}
                     >
-                      {isBuy ? "GOOD CHOICE TO BUY" : ""}
+                      {result.verdict}
                     </div>
                   </div>
 
-                  {/* 2. REASON FOR VERDICT */}
-                  {isBuy && (
-                    <div className="mt-3 pt-3 border-t border-slate-800/80 text-left">
-                      <div className="flex items-center justify-between mb-1.5">
+                  <div className="mt-3 pt-3 border-t border-slate-800/80 text-left">
+                    <div className="flex items-center justify-between mb-1.5">
                       <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-300">
-                        Why this is a good choice:
+                        Recommendation
                       </h3>
-                      {isIndia && result.primaryReasonHindi && (
-                        <span className="text-[10px] text-amber-400/90 font-medium">
-                          यह अच्छा विकल्प खरीदने के लिए है:
-                        </span>
-                      )}
-                      </div>
-                      <p className="text-xs text-slate-200 leading-relaxed font-normal">
-                      {result.primaryReason}
-                      </p>
-                      {isIndia && result.primaryReasonHindi && (
-                      <p className="text-xs text-amber-200/90 mt-1 leading-relaxed border-t border-slate-800/50 pt-1">
-                        {result.primaryReasonHindi}
-                      </p>
-                      )}
                     </div>
-                  )}
+                    <p className="text-xs text-slate-200 leading-relaxed font-normal">{result.summary}</p>
+                  </div>
                 </div>
-
-                {result.scoreBreakdown && (
-                  <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-4">
-                    <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-200">Score breakdown</h3>
-                    <div className="grid grid-cols-3 gap-2 text-xs text-slate-300">
-                      <p>Nutrition <span className="font-semibold text-white">{result.scoreBreakdown.nutrition}/60</span></p>
-                      <p>Ingredients <span className="font-semibold text-white">{result.scoreBreakdown.additives}/30</span></p>
-                      <p>Organic <span className="font-semibold text-white">{result.scoreBreakdown.organic}/10</span></p>
-                    </div>
-                    <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
-                      Additive deductions are a screening guide, not a medical assessment. This is a Yuka-inspired
-                      structure, not an official Yuka rating.
-                    </p>
-                  </div>
-                )}
-
-                {/* Regional Compliance & Regulatory Notes */}
-                {result.complianceNotes && (
-                  <div className="bg-slate-900/90 rounded-3xl p-4 border border-slate-800">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-1.5">
-                        <svg className="w-4 h-4 text-sky-400 fill-current flex-shrink-0" viewBox="0 0 24 24">
-                          <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
-                        </svg>
-                        <h3 className="text-xs font-bold text-sky-400 uppercase tracking-wider">
-                          {userCountry} Regulatory Compliance
-                        </h3>
-                      </div>
-                      {isIndia && result.complianceNotesHindi && (
-                        <span className="text-[10px] text-sky-300/80 font-medium">नियामक अनुपालन</span>
-                      )}
-                    </div>
-                    <p className="text-xs text-slate-300 leading-relaxed">
-                      {result.complianceNotes}
-                    </p>
-                    {isIndia && result.complianceNotesHindi && (
-                      <p className="text-xs text-sky-200/90 mt-1.5 border-t border-slate-800/60 pt-1.5 leading-relaxed">
-                        {result.complianceNotesHindi}
-                      </p>
-                    )}
-                  </div>
-                )}
 
                 <details className="rounded-3xl border border-slate-800 bg-slate-900/90 p-4">
                   <summary className="cursor-pointer text-xs font-bold uppercase tracking-wider text-sky-300">
@@ -506,7 +449,7 @@ export default function Home() {
                   </summary>
                   <p className="mt-2 text-[10px] leading-relaxed text-slate-400">
                     General references and photo-based observations only. This is not a legal compliance assessment;
-                    requirements depend on product type and the label images may not show all required information.
+                    This app does not make a legal compliance determination; requirements depend on product type and the full label may not be visible.
                   </p>
                   <div className="mt-3 flex flex-col gap-3">
                     {MARKET_STANDARDS.map(({ name, framework, source }) => (
@@ -523,16 +466,13 @@ export default function Home() {
                           </a>
                         </div>
                         <p className="mt-1 text-[10px] text-slate-400">{framework}</p>
-                        <p className="mt-1 text-xs leading-relaxed text-slate-300">
-                          {result.marketCompliance?.[name] || "Compliance cannot be determined from the label images."}
-                        </p>
                       </article>
                     ))}
                   </div>
                 </details>
 
                 {/* Flagged Ingredients of Concern */}
-                {result.flaggedIngredients?.length > 0 && (
+                {result.harmfulIngredients?.length > 0 && (
                   <div className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800">
                     <div className="flex items-center justify-between mb-2.5">
                       <div className="flex items-center gap-1.5">
@@ -548,15 +488,10 @@ export default function Home() {
                       )}
                     </div>
                     <div className="space-y-2">
-                      {result.flaggedIngredients.map((item: any, i: number) => (
+                      {result.harmfulIngredients.map((item: { name: string; risk: string }, i: number) => (
                         <div key={i} className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 text-xs">
                           <div className="font-semibold text-rose-200">{item.name}</div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">{item.concern}</div>
-                          {isIndia && item.concernHindi && (
-                            <div className="text-[11px] text-rose-300/80 mt-1 border-t border-slate-800/50 pt-1">
-                              {item.concernHindi}
-                            </div>
-                          )}
+                          <div className="text-[11px] text-slate-400 mt-0.5">{item.risk}</div>
                         </div>
                       ))}
                     </div>
@@ -564,13 +499,13 @@ export default function Home() {
                 )}
 
                 {/* Positive Strengths */}
-                {result.positiveHighlights?.length > 0 && (
+                {result.positives?.length > 0 && (
                   <div className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800">
                     <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2">
-                      Nutritional Strengths
+                      Positive Highlights
                     </h3>
                     <div className="flex flex-wrap gap-1.5">
-                      {result.positiveHighlights.map((hl: string, i: number) => (
+                      {result.positives.map((hl: string, i: number) => (
                         <span key={i} className="text-[11px] bg-emerald-950/60 text-emerald-300 border border-emerald-800/50 px-2.5 py-1 rounded-lg">
                           {hl}
                         </span>
@@ -579,13 +514,12 @@ export default function Home() {
                   </div>
                 )}
 
+                {Array.isArray(result.alternatives) && result.alternatives.length > 0 && (
                 {/* 3. LOCAL MARKET ALTERNATIVES */}
                 <div className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800">
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <h3 className="text-xs font-bold text-white uppercase tracking-wider">
-                        {isBuy ? "Similar Top-Rated Choices" : "Similar Choices"}
-                      </h3>
+                      <h3 className="text-xs font-bold text-white uppercase tracking-wider">Product Alternatives</h3>
                       <p className="text-[10px] text-slate-400">Available in {userCountry} market</p>
                     </div>
                     <span className="text-[10px] text-emerald-400 font-mono">Ranked</span>
@@ -594,7 +528,7 @@ export default function Home() {
                   {result.alternatives && result.alternatives.length > 0 ? (
                     <div className="space-y-2.5">
                       {result.alternatives.map((alt: any, i: number) => {
-                        const scoreDiff = alt.estimatedScore - result.healthScore;
+                        const scoreDiff = alt.estimatedScore - result.score;
                         return (
                           <div key={i} className="p-3.5 bg-slate-950/80 rounded-2xl border border-slate-800 hover:border-slate-700 transition-colors">
                             <div className="flex items-start justify-between gap-2">
@@ -642,16 +576,17 @@ export default function Home() {
                   ) : (
                     <div className="text-center py-4 bg-slate-950/40 rounded-2xl border border-slate-800">
                       <p className="text-xs text-slate-400">
-                        Top clean choices in this category will be listed here.
+                        Alternative products are not included in this response.
                       </p>
                     </div>
                   )}
+                )}
                 </div>
 
-                {/* 4. LEGAL / EDUCATIONAL DISCLAIMER */}
+                {/* Educational disclaimer */}
                 <footer className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 text-center">
                   <p className="text-[11px] text-slate-400 leading-relaxed font-normal">
-                    <span className="font-semibold text-slate-300">Disclaimer:</span> This application and its nutritional scores are for educational and informational purposes only. It is not intended as medical, dietary, or healthcare advice. Always consult with a qualified nutritionist or medical professional before making significant dietary changes.
+                    <span className="font-semibold text-slate-300">Disclaimer:</span> This application and its AI-generated scores are for educational and informational purposes only. They are not medical or healthcare advice. Consult a qualified health professional before making significant health or dietary decisions.
                   </p>
                 </footer>
               </>

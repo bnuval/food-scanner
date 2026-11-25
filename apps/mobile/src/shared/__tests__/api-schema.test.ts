@@ -4,6 +4,7 @@ import {
   AnalysisResultSchema,
   AnalyzeRequestSchema,
   BUY_THRESHOLD,
+  healthVerdictForScore,
   scoreBand,
   SearchRequestSchema,
   SearchResponseSchema,
@@ -42,6 +43,27 @@ describe('AnalysisResultSchema', () => {
     expect(r.isReadable).toBe(true);
     expect(r.scoreBreakdown).toEqual({ nutrition: 28, additives: 5, organic: 5 });
     expect(r.alternatives[0].purchaseUrl).toBe('https://www.amazon.in/s?k=Organic%20Tattva');
+  });
+
+  it('adapts the strict four-tier API response for mobile screens', () => {
+    const response = {
+      productName: 'Oat Cereal',
+      category: 'Food',
+      score: 74,
+      verdict: 'Recommended Buy',
+      harmfulIngredients: [{ name: 'Added sugar', risk: 'Frequent intake can add excess sugar.' }],
+      positives: ['Whole oats'],
+      summary: 'Okay occasionally; check the added sugar per serving.',
+    };
+    const r = AnalysisResultSchema.parse(response);
+
+    expect(r.healthScore).toBe(74);
+    expect(r.tierVerdict).toBe('Okay to Buy');
+    expect(r.verdict).toBe('BUY');
+    expect(r.primaryReason).toContain('Okay occasionally');
+    expect(r.flaggedIngredients[0]).toMatchObject({ name: 'Added sugar', concern: 'Frequent intake can add excess sugar.' });
+    expect(r.positiveHighlights).toEqual(['Whole oats']);
+    expect(AnalysisResultSchema.safeParse({ ...response, unexpected: true }).success).toBe(false);
   });
 
   it('derives the verdict from the score when the model contradicts itself', () => {
@@ -207,14 +229,23 @@ describe('request schemas', () => {
 });
 
 describe('scoreBand', () => {
-  it('maps scores to bands consistent with the BUY threshold', () => {
+  it('maps scores to the health-calibrated verdict bands', () => {
     expect(scoreBand(100)).toBe('excellent');
-    expect(scoreBand(80)).toBe('excellent');
-    expect(scoreBand(79)).toBe('good');
-    expect(scoreBand(BUY_THRESHOLD)).toBe('good');
-    expect(scoreBand(BUY_THRESHOLD - 1)).toBe('poor');
-    expect(scoreBand(40)).toBe('poor');
-    expect(scoreBand(39)).toBe('bad');
+    expect(scoreBand(85)).toBe('excellent');
+    expect(scoreBand(84)).toBe('good');
+    expect(scoreBand(75)).toBe('good');
+    expect(scoreBand(74)).toBe('okay');
+    expect(scoreBand(BUY_THRESHOLD)).toBe('okay');
+    expect(scoreBand(BUY_THRESHOLD - 1)).toBe('bad');
     expect(scoreBand(0)).toBe('bad');
+  });
+
+  it('assigns exact verdict labels at all threshold boundaries', () => {
+    expect(healthVerdictForScore(85)).toBe('Must Buy');
+    expect(healthVerdictForScore(84)).toBe('Recommended Buy');
+    expect(healthVerdictForScore(75)).toBe('Recommended Buy');
+    expect(healthVerdictForScore(74)).toBe('Okay to Buy');
+    expect(healthVerdictForScore(60)).toBe('Okay to Buy');
+    expect(healthVerdictForScore(59)).toBe('Avoid Frequent Use');
   });
 });

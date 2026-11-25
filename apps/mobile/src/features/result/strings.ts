@@ -22,8 +22,8 @@ export const resultStrings = defineStrings({
     langEnglishA11y: 'English',
     langHindiA11y: 'Hindi',
 
-    whyBuy: 'Why this is a good choice to buy',
-    noReason: 'No explanation was provided for this product.',
+    whyBuy: 'Recommendation',
+    noReason: 'No recommendation was provided for this product.',
     scoreBreakdownTitle: 'Score breakdown',
     scoreNutrition: 'Nutrition',
     scoreAdditives: 'Ingredients & additives',
@@ -38,7 +38,7 @@ export const resultStrings = defineStrings({
     showMoreA11y: 'Show more about {name}',
     showLessA11y: 'Show less about {name}',
 
-    highlightsTitle: 'Nutritional strengths',
+    highlightsTitle: 'Positive highlights',
 
     complianceTitle: 'Regulatory notes for {market}',
 
@@ -88,8 +88,8 @@ export const resultStrings = defineStrings({
     langEnglishA11y: 'अंग्रेज़ी',
     langHindiA11y: 'हिन्दी',
 
-    whyBuy: 'खरीदने के लिए अच्छा विकल्प क्यों है',
-    noReason: 'इस प्रोडक्ट के लिए कोई कारण नहीं बताया गया।',
+    whyBuy: 'सिफ़ारिश',
+    noReason: 'इस प्रोडक्ट के लिए कोई सिफ़ारिश नहीं दी गई।',
     scoreBreakdownTitle: 'स्कोर का विवरण',
     scoreNutrition: 'पोषण',
     scoreAdditives: 'सामग्री और एडिटिव',
@@ -104,7 +104,7 @@ export const resultStrings = defineStrings({
     showMoreA11y: '{name} के बारे में और दिखाएँ',
     showLessA11y: '{name} के बारे में कम दिखाएँ',
 
-    highlightsTitle: 'पोषण से जुड़ी खूबियाँ',
+    highlightsTitle: 'सकारात्मक बातें',
 
     complianceTitle: '{market} के लिए नियामक जानकारी',
 

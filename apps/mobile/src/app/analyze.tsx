@@ -13,6 +13,7 @@ import { useAnalysis } from '@/features/analyze/use-analysis';
 import { fmt, useStrings } from '@/i18n';
 import { common } from '@/i18n/common';
 import { haptic } from '@/lib/haptics';
+import { healthVerdictForScore } from '@/shared/api-schema';
 import { useScanSession } from '@/state/scan-session';
 import { useTheme } from '@/theme';
 
@@ -62,9 +63,16 @@ export default function AnalyzeScreen() {
         return;
       }
       haptic('success');
+      const tierVerdict = healthVerdictForScore(result.healthScore);
       AccessibilityInfo.announceForAccessibility(
         fmt(t.resultReadyA11y, {
-          verdict: result.verdict === 'BUY' ? c.verdictBuy : c.verdictAvoid,
+          verdict: tierVerdict === 'Must Buy'
+            ? c.verdictMustBuy
+            : tierVerdict === 'Recommended Buy'
+              ? c.verdictRecommendedBuy
+              : tierVerdict === 'Okay to Buy'
+                ? c.verdictOkayToBuy
+                : c.verdictAvoidFrequentUse,
           score: result.healthScore,
         }),
       );

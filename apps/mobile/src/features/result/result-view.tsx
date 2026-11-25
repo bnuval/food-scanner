@@ -40,7 +40,6 @@ export function ResultView({ record, textLang, onChangeTextLang }: ResultViewPro
   const { spacing } = useTheme();
   const t = useStrings(resultStrings);
   const { result } = record;
-  const buy = result.verdict === 'BUY';
   const marketName = useMarketName();
   const market = marketName(record.market);
   const reason = pickText(result.primaryReason, result.primaryReasonHindi, textLang);
@@ -74,25 +73,19 @@ export function ResultView({ record, textLang, onChangeTextLang }: ResultViewPro
     });
   }
 
-  if (buy) {
-    sections.push({
-      key: 'reason',
-      node: (
-        <View>
-          <SectionHeader
-            title={t.whyBuy}
-            icon="checkCircle"
-            iconColor="buy"
-          />
-          <Card accessibilityLiveRegion="polite">
-            <AppText variant="bodyLarge" color={reason ? 'onSurface' : 'onSurfaceVariant'}>
-              {reason || t.noReason}
-            </AppText>
-          </Card>
-        </View>
-      ),
-    });
-  }
+  sections.push({
+    key: 'reason',
+    node: (
+      <View>
+        <SectionHeader title={t.whyBuy} icon="eco" />
+        <Card accessibilityLiveRegion="polite">
+          <AppText variant="bodyLarge" color={reason ? 'onSurface' : 'onSurfaceVariant'}>
+            {reason || t.noReason}
+          </AppText>
+        </Card>
+      </View>
+    ),
+  });
 
   sections.push({ key: 'ingredients', node: <IngredientList items={result.flaggedIngredients} textLang={textLang} /> });
 

@@ -54,7 +54,7 @@ export function ResultHero({ record }: { record: ScanRecord }) {
         <ScoreRing score={result.healthScore} size={RING_SIZE} />
         {/* The pill aligns itself to flex-start; this wrapper shrinks to it so it centres. */}
         <View>
-          <VerdictPill verdict={result.verdict} size="large" />
+          <VerdictPill verdict={result.verdict} tierVerdict={result.tierVerdict} size="large" />
         </View>
       </View>
     </Card>

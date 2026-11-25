@@ -18,6 +18,7 @@ import { haptic } from '@/lib/haptics';
 import { deleteScan, getScan, type ScanRecord } from '@/lib/history';
 import { log } from '@/lib/log';
 import { historyKeys } from '@/lib/query-keys';
+import { healthVerdictForScore } from '@/shared/api-schema';
 import { useSettings } from '@/state/settings';
 import { useTheme } from '@/theme';
 
@@ -69,10 +70,17 @@ export default function ResultScreen() {
 
   const share = async (scan: ScanRecord) => {
     const { result } = scan;
+    const tierVerdict = healthVerdictForScore(result.healthScore);
     const message = buildShareMessage(t, {
       name: productLabel(result.brandName, result.productName) || t.productFallback,
       score: result.healthScore,
-      verdict: result.verdict === 'BUY' ? c.verdictBuy : c.verdictAvoid,
+      verdict: tierVerdict === 'Must Buy'
+        ? c.verdictMustBuy
+        : tierVerdict === 'Recommended Buy'
+          ? c.verdictRecommendedBuy
+          : tierVerdict === 'Okay to Buy'
+            ? c.verdictOkayToBuy
+            : c.verdictAvoidFrequentUse,
       reason: pickText(result.primaryReason, result.primaryReasonHindi, textLang),
       appName: c.appName,
     });
