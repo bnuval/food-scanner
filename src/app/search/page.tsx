@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { trackAction } from "../../lib/trackAction";
 
 interface ProductResult {
   brand: string;
@@ -69,8 +70,24 @@ export default function SearchPage() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Search failed");
       setProducts(data.products || []);
+      trackAction({
+        type: "search",
+        market: userCountry,
+        status: "success",
+        product: finalQuery,
+        category: categoryType,
+      });
     } catch (err: any) {
-      alert(err.message || "Failed to find products");
+      const failureReason = err.message || "Failed to find products";
+      trackAction({
+        type: "search",
+        market: userCountry,
+        status: "failure",
+        product: finalQuery,
+        category: categoryType,
+        failureReason,
+      });
+      alert(failureReason);
     } finally {
       setLoading(false);
     }

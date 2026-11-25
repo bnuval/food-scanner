@@ -40,8 +40,11 @@ Flipkart, Blinkit, Nykaa (India) or Amazon, Walmart, Target, Sephora (US).
 **Markets** — India, United States, United Kingdom, European Union, Australia and UAE
 (inferred from the device time zone; changeable in the mobile app).
 
-**Admin analytics** (web, `/admin`) — aggregate page views per route, day and market. Counts are
-page views, not unique people; no individual visitor identifiers or IP addresses are stored.
+**Admin analytics** (web, `/admin`) — page-view totals by route, day and market, plus a recent
+table of scan/search outcomes with the searched term or detected product. Counts are visits, not
+unique people. Recent actions retain at most 500 entries; IPs are stored only as masked network
+prefixes (IPv4 `/24`, IPv6 `/64`), never as full addresses or alongside scan photos. Each action
+also records the product category and, on failure, a short failure reason.
 
 **Mobile-only** — camera-first scanning with barcode detection, on-device scan history, light
 and dark themes, full English/Hindi UI, TalkBack support. See the
@@ -124,6 +127,10 @@ In the JSONBin record, preserve that hash alongside the analytics fields, for ex
   "dailyVisits": {}
 }
 ```
+
+The admin table also reads a `recentActions` array managed by the app. It keeps only the latest
+500 scan/search outcomes. The "IP Network" field is a masked network prefix, not a full IP address.
+Page-view totals are not unique-user counts; daily visits use UTC dates.
 
 Keep the bin private, configure `JSONBIN_API_KEY` and `JSONBIN_BIN_ID` as Netlify server-side
 environment variables, and redeploy. Never put the JSONBin master key in browser code or share

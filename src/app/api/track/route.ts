@@ -25,7 +25,9 @@ export async function POST(req: NextRequest) {
     if ("failure" in body) return NextResponse.json({ success: false }, { status: body.failure });
     const { path, country } = (body.data ?? {}) as { path?: unknown; country?: unknown };
 
-    const apiKey = process.env.JSONBIN_API_KEY?.trim();
+    const apiKey =
+      process.env.JSONBIN_API_KEY?.trim() ||
+      process.env["X-Master-Key"]?.trim();
     const binId = process.env.JSONBIN_BIN_ID?.trim();
 
     if (!apiKey || !binId) {

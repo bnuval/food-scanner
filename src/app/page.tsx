@@ -4,12 +4,29 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import NextImage from "next/image";
 import { MARKET_STANDARDS } from "./market-standards";
+import { trackAction } from "../lib/trackAction";
 
 const ANALYSIS_CACHE_PREFIX = "purebite:analysis:v5:";
 const ANALYSIS_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 const MAX_CACHED_ANALYSES = 40;
 
 type CachedAnalysis = { expiresAt: number; result: unknown };
+
+function productLabel(value: unknown): string {
+  if (!value || typeof value !== "object") return "";
+  const record = value as Record<string, unknown>;
+  return typeof record.productName === "string"
+    ? record.productName
+    : typeof record.brandName === "string"
+      ? record.brandName
+      : "";
+}
+
+function productCategory(value: unknown): string {
+  if (!value || typeof value !== "object") return "";
+  const category = (value as Record<string, unknown>).category;
+  return typeof category === "string" ? category : "";
+}
 
 async function analysisCacheKey(images: string[], country: string): Promise<string | null> {
   if (!globalThis.crypto?.subtle) return null;
@@ -168,6 +185,13 @@ export default function Home() {
         setResult(cached);
         setShowingCachedResult(true);
         setUploadProgress(100);
+        trackAction({
+          type: "scan",
+          market: userCountry,
+          status: "success",
+          product: productLabel(cached),
+          category: productCategory(cached),
+        });
         return;
       }
 
@@ -209,8 +233,25 @@ export default function Home() {
       });
       if (cacheKey) writeCachedAnalysis(cacheKey, data);
       setResult(data);
+      trackAction({
+        type: "scan",
+        market: userCountry,
+        status: "success",
+        product: productLabel(data),
+        category: productCategory(data),
+      });
     } catch (err: any) {
-      setScanError(err.message || "An unexpected error occurred. Your photos are kept so you can retry.");
+      const failureReason =
+        err.message || "An unexpected error occurred. Your photos are kept so you can retry.";
+      trackAction({
+        type: "scan",
+        market: userCountry,
+        status: "failure",
+        product: "",
+        category: "",
+        failureReason,
+      });
+      setScanError(failureReason);
     } finally {
       setLoading(false);
     }

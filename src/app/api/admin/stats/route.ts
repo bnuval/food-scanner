@@ -32,7 +32,9 @@ export async function POST(req: NextRequest) {
       return errorResponse(401, "UNAUTHORIZED");
     }
 
-    const apiKey = process.env.JSONBIN_API_KEY?.trim();
+    const apiKey =
+      process.env.JSONBIN_API_KEY?.trim() ||
+      process.env["X-Master-Key"]?.trim();
     const binId = process.env.JSONBIN_BIN_ID?.trim();
     if (!apiKey || !binId) {
       console.error("[admin] JSONBIN_API_KEY or JSONBIN_BIN_ID is not set");
@@ -43,6 +45,17 @@ export async function POST(req: NextRequest) {
       headers: { "X-Master-Key": apiKey },
       cache: "no-store",
     });
+
+    if (res.status === 401 || res.status === 403 || res.status === 404) {
+      console.error(`[admin] JSONBin rejected the configured key or bin ID: ${res.status}`);
+      return NextResponse.json(
+        {
+          error:
+            "JSONBin rejected the configured Master Key or Bin ID. Confirm the key and bin belong to the same account.",
+        },
+        { status: 503 }
+      );
+    }
 
     if (!res.ok) {
       throw new Error(`JSONBin error status: ${res.status}`);
@@ -64,6 +77,7 @@ export async function POST(req: NextRequest) {
       countryCounts: data.countryCounts || {},
       pageCounts: data.pageCounts || {},
       dailyVisits: data.dailyVisits || {},
+      recentActions: Array.isArray(data.recentActions) ? data.recentActions.slice().reverse() : [],
     });
   } catch (err) {
     console.error("[admin] stats fetch error:", err);

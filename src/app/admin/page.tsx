@@ -8,7 +8,19 @@ interface StatsData {
   countryCounts: Record<string, number>;
   pageCounts: Record<string, number>;
   dailyVisits: Record<string, number>;
+  recentActions: ActionRecord[];
   notice?: string;
+}
+
+interface ActionRecord {
+  timestamp: string;
+  market: string;
+  ip: string;
+  type: "scan" | "search";
+  product: string;
+  category: string;
+  status: "success" | "failure";
+  failureReason: string;
 }
 
 export default function AdminPage() {
@@ -71,6 +83,7 @@ export default function AdminPage() {
   const sortedDays = Object.entries(stats?.dailyVisits || {}).sort(
     ([dayA], [dayB]) => new Date(dayB).getTime() - new Date(dayA).getTime()
   );
+  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex justify-center py-6 px-3 sm:px-6">
@@ -144,16 +157,25 @@ export default function AdminPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="bg-slate-900/90 rounded-2xl p-5 border border-slate-800 shadow-xl flex flex-col justify-between">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
-                  Total Page Views
+                  Total Visits
                 </span>
                 <div className="text-4xl font-black text-white mt-2 flex items-baseline gap-2">
                   <span>{stats?.totalVisits || 0}</span>
-                  <span className="text-xs font-semibold text-emerald-400 uppercase">Views</span>
+                  <span className="text-xs font-semibold text-emerald-400 uppercase">Visits</span>
                 </div>
                 <span className="text-[10px] text-slate-500 mt-1">Repeat visits are included</span>
+              </div>
+
+              <div className="bg-slate-900/90 rounded-2xl p-5 border border-slate-800 shadow-xl flex flex-col justify-between">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                  Visits Today (UTC)
+                </span>
+                <div className="text-4xl font-black text-sky-400 mt-2">
+                  {stats?.dailyVisits?.[today] || 0}
+                </div>
               </div>
 
               <div className="bg-slate-900/90 rounded-2xl p-5 border border-slate-800 shadow-xl flex flex-col justify-between">
@@ -188,7 +210,7 @@ export default function AdminPage() {
                     Page Views by Route
                   </h2>
                   <p className="text-[11px] text-slate-400">
-                    Aggregate page views by route. No individual visitor or IP logs are stored.
+                    Aggregate page views by route; counts are not unique people.
                   </p>
                 </div>
                 <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/80 border border-emerald-800/60 px-2.5 py-1 rounded-full">
@@ -222,6 +244,60 @@ export default function AdminPage() {
                       <tr>
                         <td colSpan={2} className="py-6 text-center text-slate-500">
                           No page views recorded yet.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800 shadow-xl">
+              <div className="mb-4">
+                <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+                  Recent Scans & Searches
+                </h2>
+                <p className="text-[11px] text-slate-400">
+                  Latest 500 actions. IPs are masked to a network prefix; no photos are recorded.
+                </p>
+              </div>
+
+              <div className="overflow-x-auto rounded-2xl border border-slate-800">
+                <table className="w-full min-w-[1040px] text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-950/90 border-b border-slate-800 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      <th className="py-3 px-4">Date / Time (UTC)</th>
+                      <th className="py-3 px-4">Market</th>
+                      <th className="py-3 px-4">IP Network</th>
+                      <th className="py-3 px-4">Searched / Scanned</th>
+                      <th className="py-3 px-4">Product Name / Search</th>
+                      <th className="py-3 px-4">Category</th>
+                      <th className="py-3 px-4">Result</th>
+                      <th className="py-3 px-4">Failure Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800 bg-slate-900/50">
+                    {stats?.recentActions?.length ? stats.recentActions.map((action, index) => (
+                      <tr key={`${action.timestamp}-${index}`} className="hover:bg-slate-800/40 transition-colors">
+                        <td className="py-3 px-4 whitespace-nowrap font-mono text-slate-300">
+                          {new Date(action.timestamp).toLocaleString(undefined, { timeZone: "UTC" })}
+                        </td>
+                        <td className="py-3 px-4 whitespace-nowrap text-slate-300">{action.market}</td>
+                        <td className="py-3 px-4 whitespace-nowrap font-mono text-slate-400">{action.ip}</td>
+                        <td className="py-3 px-4 text-slate-300">{action.type === "scan" ? "Scanned" : "Searched"}</td>
+                        <td className="py-3 px-4 max-w-xs truncate text-slate-200">{action.product || "—"}</td>
+                        <td className="py-3 px-4 capitalize text-slate-300">{action.category || "—"}</td>
+                        <td className={`py-3 px-4 font-semibold capitalize ${action.status === "success" ? "text-emerald-400" : "text-rose-400"}`}>
+                          {action.status}
+                        </td>
+                        <td className="py-3 px-4 max-w-xs truncate text-rose-300">
+                          {action.status === "failure" ? action.failureReason || "Not provided" : "—"}
+                        </td>
+                      </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={8} className="py-6 text-center text-slate-500">
+                          No scan or search actions recorded yet.
                         </td>
                       </tr>
                     )}
