@@ -514,8 +514,8 @@ export default function Home() {
                   </div>
                 )}
 
-                {Array.isArray(result.alternatives) && result.alternatives.length > 0 && (
                 {/* 3. LOCAL MARKET ALTERNATIVES */}
+                {Array.isArray(result.alternatives) && result.alternatives.length > 0 && (
                 <div className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800">
                   <div className="flex items-center justify-between mb-3">
                     <div>
@@ -580,8 +580,8 @@ export default function Home() {
                       </p>
                     </div>
                   )}
-                )}
                 </div>
+                )}
 
                 {/* Educational disclaimer */}
                 <footer className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 text-center">
