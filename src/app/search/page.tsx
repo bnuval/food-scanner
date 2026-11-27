@@ -131,6 +131,9 @@ export default function SearchPage() {
 
         {/* Search Input Box */}
         <section className="bg-slate-900/90 rounded-3xl p-5 border border-slate-800 shadow-2xl backdrop-blur-md">
+          <h2 className="mb-3 text-sm font-bold text-white">
+            Search healthy food and cosmetics
+          </h2>
           {/* Category Toggle */}
           <div className="flex gap-2 mb-4">
             <button
@@ -320,9 +323,9 @@ export default function SearchPage() {
             <div className="w-12 h-12 rounded-2xl bg-emerald-950/60 border border-emerald-800/40 flex items-center justify-center mx-auto mb-3">
               <span className="text-xl">✨</span>
             </div>
-            <h3 className="text-sm font-bold text-white">Find Certified Clean Products</h3>
+            <h3 className="text-sm font-bold text-white">Find Better-Fit Products</h3>
             <p className="text-xs text-slate-400 mt-1 max-w-[280px] mx-auto leading-relaxed">
-              Search any food or personal care item to discover products rated 75+ with direct links to Amazon, Flipkart, Blinkit, and local stores.
+              Search food, cosmetics, or personal-care items to explore product ratings and retailer links available in your market.
             </p>
           </div>
         )}

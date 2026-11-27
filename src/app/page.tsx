@@ -402,6 +402,37 @@ export default function Home() {
           )}
         </section>
 
+        <section
+          aria-labelledby="about-purebite"
+          className="rounded-3xl border border-slate-800 bg-slate-900/70 p-5"
+        >
+          <h2 id="about-purebite" className="text-sm font-bold text-white">
+            AI food and cosmetic ingredient scanner
+          </h2>
+          <p className="mt-2 text-xs leading-relaxed text-slate-300">
+            PureBite AI helps you review packaged food, cosmetics, and personal-care product labels.
+            Upload a clear photo of the ingredients or nutrition panel to get an estimated health
+            score, a summary, and ingredients of concern based on the visible label.
+          </p>
+          <h3 className="mt-4 text-xs font-semibold text-white">
+            Search for healthier packaged food and personal-care products
+          </h3>
+          <p className="mt-1 text-xs leading-relaxed text-slate-300">
+            Use Product Search to explore food and cosmetic products by name or type, with results
+            tailored to your market and links to retailers.
+          </p>
+          <Link
+            href="/search"
+            className="mt-3 inline-flex text-xs font-semibold text-emerald-400 underline underline-offset-4 hover:text-emerald-300"
+          >
+            Explore healthy food and cosmetics
+          </Link>
+          <p className="mt-3 text-[11px] leading-relaxed text-slate-400">
+            AI scores are estimates for general information, not medical advice or a guarantee of
+            product safety. Always check the full product packaging.
+          </p>
+        </section>
+
         {/* Loading Skeleton */}
         {loading && (
           <>
